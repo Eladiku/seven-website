@@ -1,4 +1,4 @@
-import { schedule, DAY_INDEX, type TrainingSession } from "@/data/schedule";
+import { DAY_INDEX, type TrainingSession } from "@/data/schedule";
 
 const HEB_DAYS = [
   "ראשון",
@@ -39,9 +39,10 @@ export function getUpcomingDays(count: number): Date[] {
 }
 
 /** Returns sessions that recur on the same weekday as the given date. */
-export function getSessionsForDate(date: Date): TrainingSession[] {
+export function getSessionsForDate(sessions: TrainingSession[], date: Date): TrainingSession[] {
+  if (!Array.isArray(sessions) || !(date instanceof Date) || isNaN(date.getTime())) return [];
   const dow = date.getDay(); // 0 = Sunday
-  return schedule.filter((s) => DAY_INDEX[s.day] === dow);
+  return sessions.filter((s) => DAY_INDEX[s.day] === dow);
 }
 
 /** True if two Date objects refer to the same calendar day. */

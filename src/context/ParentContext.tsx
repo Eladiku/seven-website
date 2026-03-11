@@ -40,6 +40,11 @@ interface ParentContextValue {
 
   cardUsage: TrainingCard[];
 
+  sessions: TrainingSession[];
+  addSession: (data: Omit<TrainingSession, "id" | "spotsFilled">) => void;
+  updateSession: (id: string, data: Omit<TrainingSession, "id" | "spotsFilled">) => void;
+  deleteSession: (id: string) => void;
+
   /**
    * Dev-only overrides: when set for a child, replaces the booking-derived
    * usedSessions count for display and eligibility everywhere.
@@ -64,6 +69,7 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
   );
   const [bookings, setBookings] = useState<Booking[]>(defaults.bookings);
   const [cardUsage, setCardUsage] = useState<TrainingCard[]>(defaults.cardUsage);
+  const [sessions, setSessions] = useState<TrainingSession[]>(defaults.sessions);
   const [cardDevOverrides, setCardDevOverrides] = useState<Record<string, number>>(
     defaults.cardDevOverrides
   );
@@ -79,6 +85,8 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
       setSelectedChildId(stored.selectedChildId);
       setBookings(stored.bookings);
       if (Array.isArray(stored.cardUsage)) setCardUsage(stored.cardUsage);
+      // Fall back to default schedule if sessions missing (old localStorage data)
+      if (Array.isArray(stored.sessions)) setSessions(stored.sessions);
       if (stored.cardDevOverrides && typeof stored.cardDevOverrides === "object") {
         setCardDevOverrides(stored.cardDevOverrides);
       }
@@ -97,9 +105,10 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
       selectedChildId: resolvedChild?.id ?? null,
       bookings,
       cardUsage,
+      sessions,
       cardDevOverrides,
     });
-  }, [children, rawSelectedChildId, bookings, cardUsage, cardDevOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [children, rawSelectedChildId, bookings, cardUsage, sessions, cardDevOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Children mutations ────────────────────────────────────────────────────
   function addChild(data: Omit<Child, "id">) {
@@ -161,6 +170,28 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     setBookings((prev) => prev.filter((b) => b.id !== id));
   }
 
+  // ── Session mutations (admin) ─────────────────────────────────────────────
+  function addSession(data: Omit<TrainingSession, "id" | "spotsFilled">) {
+    const newSession: TrainingSession = {
+      id: `s-${Date.now()}`,
+      spotsFilled: 0,
+      ...data,
+    };
+    setSessions((prev) => [...prev, newSession]);
+  }
+
+  function updateSession(id: string, data: Omit<TrainingSession, "id" | "spotsFilled">) {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...data } : s))
+    );
+  }
+
+  function deleteSession(id: string) {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    // Remove orphaned bookings for this session
+    setBookings((prev) => prev.filter((b) => b.sessionId !== id));
+  }
+
   // ── Dev override ──────────────────────────────────────────────────────────
   function devSetCardUsed(childId: string, used: number | null) {
     setCardDevOverrides((prev) => {
@@ -181,6 +212,7 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     setSelectedChildId(d.selectedChildId);
     setBookings(d.bookings);
     setCardUsage(d.cardUsage);
+    setSessions(d.sessions);
     setCardDevOverrides(d.cardDevOverrides);
   }
 
@@ -198,6 +230,10 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
         toggleAttendance,
         cancelBooking,
         cardUsage,
+        sessions,
+        addSession,
+        updateSession,
+        deleteSession,
         cardDevOverrides,
         devSetCardUsed,
         resetToMockData,

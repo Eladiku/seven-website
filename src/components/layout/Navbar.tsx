@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/schedule", label: "לוח אימונים" },
   { href: "/dashboard", label: "אזור אישי" },
   { href: "/contact", label: "צור קשר" },
+  { href: "/admin", label: "ניהול" },
 ];
 
 export default function Navbar() {

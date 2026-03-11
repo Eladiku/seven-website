@@ -1,5 +1,7 @@
 import { mockParent, mockBookings, mockCards } from "@/data/parent";
 import type { Child, Booking, TrainingCard } from "@/data/parent";
+import { schedule } from "@/data/schedule";
+import type { TrainingSession } from "@/data/schedule";
 
 /** The single localStorage key for the entire app state. */
 export const STORAGE_KEY = "sevenAcademyState";
@@ -10,6 +12,7 @@ export interface AppState {
   selectedChildId: string | null;
   bookings: Booking[];
   cardUsage: TrainingCard[];
+  sessions: TrainingSession[];
   /**
    * Dev-only overrides for usedSessions per child.
    * When set, replaces the booking-derived count for display + eligibility.
@@ -25,6 +28,7 @@ export function getDefaultState(): AppState {
     selectedChildId: mockParent.children[0]?.id ?? null,
     bookings: mockBookings,
     cardUsage: mockCards,
+    sessions: schedule,
     cardDevOverrides: {},
   };
 }

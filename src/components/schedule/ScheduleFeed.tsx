@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { schedule } from "@/data/schedule";
 import { useParent } from "@/context/ParentContext";
 import { getUpcomingDays, getSessionsForDate, formatHebDate, toLocalISODate } from "@/lib/scheduleUtils";
 import { filterSessionsByBirthYear, getUniqueBirthYears } from "@/lib/childUtils";
@@ -24,6 +23,7 @@ export default function ScheduleFeed() {
     selectedChild,
     bookings,
     cardUsage,
+    sessions,
     cardDevOverrides,
     toggleAttendance,
   } = useParent();
@@ -68,7 +68,7 @@ export default function ScheduleFeed() {
 
   // ── Optimistic spot counts ────────────────────────────────────────────────
   const [localSpots, setLocalSpots] = useState<Record<string, number>>(
-    () => Object.fromEntries(schedule.map((s) => [s.id, s.spotsFilled]))
+    () => Object.fromEntries(sessions.map((s) => [s.id, s.spotsFilled]))
   );
 
   // ── Attending: confirmed bookings for this child on this date ─────────────
@@ -90,7 +90,7 @@ export default function ScheduleFeed() {
   // Rule: show sessions that match child's birthYear OR are booked for this child.
   // This ensures booked sessions always appear even after a birth year edit.
   const { sessionsToShow, mismatchedIds } = useMemo(() => {
-    const allForDay = getSessionsForDate(selectedDate);
+    const allForDay = getSessionsForDate(sessions, selectedDate);
 
     // Sessions matching current birth year
     const byBirthYear = new Set(
@@ -113,7 +113,7 @@ export default function ScheduleFeed() {
     );
 
     return { sessionsToShow: toShow, mismatchedIds: mismatched };
-  }, [selectedDate, activeBirthYear, attendingSessionIds]);
+  }, [selectedDate, activeBirthYear, attendingSessionIds, sessions]);
 
   // ── Total confirmed bookings for the summary badge ────────────────────────
   const totalConfirmed = useMemo(() => {
@@ -129,7 +129,7 @@ export default function ScheduleFeed() {
     const isNowAttending = !attendingSessionIds.has(sessionId);
     // Block new bookings when the card is invalid; canceling is always allowed.
     if (isNowAttending && cardStatus !== "ok") return;
-    const session = schedule.find((s) => s.id === sessionId);
+    const session = sessions.find((s) => s.id === sessionId);
     if (!session) return;
 
     toggleAttendance(
@@ -185,6 +185,7 @@ export default function ScheduleFeed() {
         <DateSelector
           days={days}
           selectedDate={selectedDate}
+          sessions={sessions}
           onSelect={setSelectedDate}
         />
       </div>

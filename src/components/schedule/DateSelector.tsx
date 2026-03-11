@@ -1,19 +1,21 @@
 import { shortHebDay, isToday, isSameDay, getSessionsForDate } from "@/lib/scheduleUtils";
+import type { TrainingSession } from "@/data/schedule";
 
 interface DateSelectorProps {
   days: Date[];
   selectedDate: Date;
+  sessions: TrainingSession[];
   onSelect: (date: Date) => void;
 }
 
-export default function DateSelector({ days, selectedDate, onSelect }: DateSelectorProps) {
+export default function DateSelector({ days, selectedDate, sessions, onSelect }: DateSelectorProps) {
   return (
     <div className="overflow-x-auto no-scrollbar -mx-4 px-4">
       <div className="flex gap-2 pb-1" style={{ width: "max-content" }}>
         {days.map((day) => {
           const selected = isSameDay(day, selectedDate);
           const today = isToday(day);
-          const hasSessions = getSessionsForDate(day).length > 0;
+          const hasSessions = getSessionsForDate(sessions, day).length > 0;
 
           return (
             <button
