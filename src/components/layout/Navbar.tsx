@@ -9,6 +9,7 @@ const navLinks = [
   { href: "/programs", label: "תוכניות" },
   { href: "/pricing", label: "כרטיסיית אימונים" },
   { href: "/schedule", label: "לוח אימונים" },
+  { href: "/dashboard", label: "אזור אישי" },
   { href: "/contact", label: "צור קשר" },
 ];
 

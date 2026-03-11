@@ -71,3 +71,18 @@ export function isToday(date: Date): boolean {
   today.setHours(0, 0, 0, 0);
   return isSameDay(date, today);
 }
+
+/**
+ * Returns "YYYY-MM-DD" using LOCAL date components.
+ *
+ * DO NOT use d.toISOString().slice(0,10) — that converts to UTC first,
+ * which shifts dates backward by one day in timezones east of UTC (e.g. Israel).
+ * All Date objects in this app are created at local midnight via setHours(0,0,0,0),
+ * so we must extract year/month/day in local time to match booking date strings.
+ */
+export function toLocalISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}

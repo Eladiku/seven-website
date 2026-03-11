@@ -3,6 +3,7 @@ import { Heebo } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { ParentProvider } from "@/context/ParentContext";
 
 const heebo = Heebo({
   subsets: ["hebrew", "latin"],
@@ -24,9 +25,11 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" className={heebo.variable}>
       <body className="antialiased flex flex-col min-h-screen">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <ParentProvider>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </ParentProvider>
       </body>
     </html>
   );

@@ -5,6 +5,8 @@ interface SessionCardProps {
   isAttending: boolean;
   currentSpots: number;
   onToggle: () => void;
+  /** True when the child is booked for this session but their birth year no longer matches */
+  isMismatch?: boolean;
 }
 
 const AGE_BADGE: Record<string, { bg: string; color: string }> = {
@@ -19,6 +21,7 @@ export default function SessionCard({
   isAttending,
   currentSpots,
   onToggle,
+  isMismatch = false,
 }: SessionCardProps) {
   const badge = AGE_BADGE[session.ageGroup] ?? { bg: "rgba(255,255,255,0.1)", color: "#fff" };
   const isFull = currentSpots >= session.spotsTotal && !isAttending;
@@ -29,10 +32,14 @@ export default function SessionCard({
     <div
       className="rounded-2xl p-5 transition-all"
       style={{
-        background: isAttending
+        background: isMismatch
+          ? "rgba(251,146,60,0.05)"
+          : isAttending
           ? "rgba(201,168,76,0.07)"
           : "rgba(255,255,255,0.04)",
-        border: isAttending
+        border: isMismatch
+          ? "1px solid rgba(251,146,60,0.3)"
+          : isAttending
           ? "1px solid rgba(201,168,76,0.35)"
           : "1px solid rgba(255,255,255,0.08)",
       }}
@@ -55,9 +62,13 @@ export default function SessionCard({
         {isAttending && (
           <span
             className="text-xs font-bold px-2.5 py-1 rounded-full"
-            style={{ background: "rgba(201,168,76,0.15)", color: "#c9a84c" }}
+            style={
+              isMismatch
+                ? { background: "rgba(251,146,60,0.15)", color: "#fdba74" }
+                : { background: "rgba(201,168,76,0.15)", color: "#c9a84c" }
+            }
           >
-            רשום ✓
+            נרשמתם לאימון זה ✓
           </span>
         )}
       </div>
@@ -105,6 +116,20 @@ export default function SessionCard({
           />
         </div>
       </div>
+
+      {/* Mismatch warning */}
+      {isMismatch && (
+        <div
+          className="mb-3 rounded-xl px-3 py-2 text-xs font-semibold"
+          style={{
+            background: "rgba(251,146,60,0.08)",
+            border: "1px solid rgba(251,146,60,0.2)",
+            color: "#fdba74",
+          }}
+        >
+          אינו תואם לשנתון הנוכחי — האימון נשמר כי נרשמת אליו
+        </div>
+      )}
 
       {/* CTA */}
       {isFull ? (

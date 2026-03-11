@@ -6,6 +6,8 @@ interface DaySectionProps {
   date: Date;
   sessions: TrainingSession[];
   attending: Set<string>;
+  /** Session IDs that are booked but don't match the child's current birth year */
+  mismatchedIds: Set<string>;
   localSpots: Record<string, number>;
   onToggle: (id: string) => void;
 }
@@ -14,6 +16,7 @@ export default function DaySection({
   date,
   sessions,
   attending,
+  mismatchedIds,
   localSpots,
   onToggle,
 }: DaySectionProps) {
@@ -47,6 +50,7 @@ export default function DaySection({
               key={session.id}
               session={session}
               isAttending={attending.has(session.id)}
+              isMismatch={mismatchedIds.has(session.id)}
               currentSpots={localSpots[session.id] ?? session.spotsFilled}
               onToggle={() => onToggle(session.id)}
             />
