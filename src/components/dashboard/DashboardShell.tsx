@@ -10,7 +10,7 @@ const TODAY = "2026-03-10";
 
 export default function DashboardShell() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  // ── All state from the single shared context ──────────────────────────────
+
   const {
     children,
     addChild,
@@ -22,12 +22,19 @@ export default function DashboardShell() {
     bookings,
     cancelBooking,
     cardUsage,
+    cardDevOverrides,
+    devSetCardUsed,
     resetToMockData,
   } = useParent();
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const selectedCard =
     cardUsage.find((c) => c.childId === selectedChild?.id) ?? null;
+
+  const devUsedOverride =
+    selectedChild && selectedChild.id in cardDevOverrides
+      ? cardDevOverrides[selectedChild.id]
+      : null;
 
   const childBookings = useMemo(
     () => bookings.filter((b) => b.childId === selectedChild?.id),
@@ -49,6 +56,14 @@ export default function DashboardShell() {
         .sort((a, b) => b.date.localeCompare(a.date)),
     [childBookings]
   );
+
+  // ── Dev controls ──────────────────────────────────────────────────────────
+  const total = selectedCard?.totalSessions ?? 10;
+  const devButtons: { label: string; used: number }[] = [
+    { label: "הגדר יתרה ל-0", used: total },
+    { label: "הגדר יתרה ל-1", used: total - 1 },
+    { label: "מלא ל-10 אימונים", used: 0 },
+  ];
 
   return (
     <div style={{ background: "#070d17", minHeight: "100vh" }}>
@@ -77,7 +92,7 @@ export default function DashboardShell() {
           onDelete={deleteChild}
         />
 
-        {/* ── Child selector (shown when multiple children exist) ────────── */}
+        {/* ── Child selector ────────────────────────────────────────────────── */}
         {children.length > 1 && (
           <div>
             <p
@@ -129,14 +144,83 @@ export default function DashboardShell() {
         {/* ── Divider ───────────────────────────────────────────────────────── */}
         <div style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
 
-        {/* ── Section 2: My Training Card (card + upcoming + past) ─────────── */}
+        {/* ── Section 2: My Training Card ───────────────────────────────────── */}
         <MyCardSection
           child={selectedChild}
           card={selectedCard}
           upcomingBookings={upcomingBookings}
           pastBookings={pastBookings}
           onCancel={cancelBooking}
+          devUsedOverride={devUsedOverride}
         />
+
+        {/* ── Dev tools ─────────────────────────────────────────────────────── */}
+        {selectedChild && selectedCard && (
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px dashed rgba(255,255,255,0.1)",
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-3">
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded"
+                style={{
+                  background: "rgba(251,146,60,0.12)",
+                  color: "#fdba74",
+                  border: "1px solid rgba(251,146,60,0.2)",
+                }}
+              >
+                DEV
+              </span>
+              <span
+                className="text-xs font-semibold"
+                style={{ color: "rgba(255,255,255,0.3)" }}
+              >
+                כלי בדיקה — {selectedChild.name}
+                {devUsedOverride !== null && (
+                  <span style={{ color: "#fdba74" }}>
+                    {" "}· פעיל (יתרה: {total - devUsedOverride})
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-wrap gap-2">
+              {devButtons.map(({ label, used }) => {
+                const isActive = devUsedOverride === used;
+                return (
+                  <button
+                    key={label}
+                    onClick={() =>
+                      devSetCardUsed(selectedChild.id, isActive ? null : used)
+                    }
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
+                    style={
+                      isActive
+                        ? {
+                            background: "rgba(251,146,60,0.15)",
+                            color: "#fdba74",
+                            border: "1px solid rgba(251,146,60,0.35)",
+                          }
+                        : {
+                            background: "rgba(255,255,255,0.04)",
+                            color: "rgba(255,255,255,0.4)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                          }
+                    }
+                  >
+                    {label}
+                    {isActive && " ✓"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── Reset demo data ───────────────────────────────────────────────── */}
         <div

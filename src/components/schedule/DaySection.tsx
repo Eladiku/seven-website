@@ -1,6 +1,6 @@
 import type { TrainingSession } from "@/data/schedule";
 import { formatHebDate } from "@/lib/scheduleUtils";
-import SessionCard from "./SessionCard";
+import SessionCard, { type CardStatus } from "./SessionCard";
 
 interface DaySectionProps {
   date: Date;
@@ -9,6 +9,7 @@ interface DaySectionProps {
   /** Session IDs that are booked but don't match the child's current birth year */
   mismatchedIds: Set<string>;
   localSpots: Record<string, number>;
+  cardStatus: CardStatus;
   onToggle: (id: string) => void;
 }
 
@@ -18,6 +19,7 @@ export default function DaySection({
   attending,
   mismatchedIds,
   localSpots,
+  cardStatus,
   onToggle,
 }: DaySectionProps) {
   return (
@@ -52,6 +54,7 @@ export default function DaySection({
               isAttending={attending.has(session.id)}
               isMismatch={mismatchedIds.has(session.id)}
               currentSpots={localSpots[session.id] ?? session.spotsFilled}
+              cardStatus={cardStatus}
               onToggle={() => onToggle(session.id)}
             />
           ))}

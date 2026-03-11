@@ -40,6 +40,14 @@ interface ParentContextValue {
 
   cardUsage: TrainingCard[];
 
+  /**
+   * Dev-only overrides: when set for a child, replaces the booking-derived
+   * usedSessions count for display and eligibility everywhere.
+   * Set to null to remove the override and return to derived count.
+   */
+  cardDevOverrides: Record<string, number>;
+  devSetCardUsed: (childId: string, used: number | null) => void;
+
   /** Clears localStorage and restores original mock data. */
   resetToMockData: () => void;
 }
@@ -50,19 +58,17 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
   const defaults = getDefaultState();
 
   // ── State — initialised with mock data (SSR-safe) ─────────────────────────
-  // localStorage is only read inside a useEffect (client-only).
-  // This keeps server and client initial renders identical, avoiding hydration
-  // mismatches.
   const [children, setChildren] = useState<Child[]>(defaults.children);
   const [rawSelectedChildId, setSelectedChildId] = useState<string | null>(
     defaults.selectedChildId
   );
   const [bookings, setBookings] = useState<Booking[]>(defaults.bookings);
   const [cardUsage, setCardUsage] = useState<TrainingCard[]>(defaults.cardUsage);
+  const [cardDevOverrides, setCardDevOverrides] = useState<Record<string, number>>(
+    defaults.cardDevOverrides
+  );
 
   // Guards the persist effect from firing before hydration is complete.
-  // Without this, the effect would overwrite localStorage with mock data
-  // on the first render, before the hydration effect has a chance to read it.
   const hydrated = useRef(false);
 
   // ── Phase 1 — Hydrate from localStorage after mount ──────────────────────
@@ -73,14 +79,14 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
       setSelectedChildId(stored.selectedChildId);
       setBookings(stored.bookings);
       if (Array.isArray(stored.cardUsage)) setCardUsage(stored.cardUsage);
+      if (stored.cardDevOverrides && typeof stored.cardDevOverrides === "object") {
+        setCardDevOverrides(stored.cardDevOverrides);
+      }
     }
-    // Mark hydration complete regardless of whether we found stored data,
-    // so the persist effect starts writing on subsequent changes.
     hydrated.current = true;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Phase 2 — Persist entire state to a single key on every change ────────
-  // Uses the resolved selectedChildId so the stored value is always valid.
+  // ── Phase 2 — Persist entire state on every change ────────────────────────
   const resolvedChild =
     children.find((c) => c.id === rawSelectedChildId) ?? children[0] ?? null;
 
@@ -91,8 +97,9 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
       selectedChildId: resolvedChild?.id ?? null,
       bookings,
       cardUsage,
+      cardDevOverrides,
     });
-  }, [children, rawSelectedChildId, bookings, cardUsage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [children, rawSelectedChildId, bookings, cardUsage, cardDevOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Children mutations ────────────────────────────────────────────────────
   function addChild(data: Omit<Child, "id">) {
@@ -105,8 +112,6 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     setChildren((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
     );
-    // Bookings stay linked by childId. Birth year change does NOT remove them;
-    // ScheduleFeed surfaces mismatched bookings with a visible warning instead.
   }
 
   function deleteChild(id: string) {
@@ -156,6 +161,18 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     setBookings((prev) => prev.filter((b) => b.id !== id));
   }
 
+  // ── Dev override ──────────────────────────────────────────────────────────
+  function devSetCardUsed(childId: string, used: number | null) {
+    setCardDevOverrides((prev) => {
+      if (used === null) {
+        const next = { ...prev };
+        delete next[childId];
+        return next;
+      }
+      return { ...prev, [childId]: used };
+    });
+  }
+
   // ── Reset ─────────────────────────────────────────────────────────────────
   function resetToMockData() {
     clearStoredState();
@@ -164,6 +181,7 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     setSelectedChildId(d.selectedChildId);
     setBookings(d.bookings);
     setCardUsage(d.cardUsage);
+    setCardDevOverrides(d.cardDevOverrides);
   }
 
   return (
@@ -180,6 +198,8 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
         toggleAttendance,
         cancelBooking,
         cardUsage,
+        cardDevOverrides,
+        devSetCardUsed,
         resetToMockData,
       }}
     >

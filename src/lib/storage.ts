@@ -10,6 +10,12 @@ export interface AppState {
   selectedChildId: string | null;
   bookings: Booking[];
   cardUsage: TrainingCard[];
+  /**
+   * Dev-only overrides for usedSessions per child.
+   * When set, replaces the booking-derived count for display + eligibility.
+   * Easy to remove: delete this field and its usages in context + components.
+   */
+  cardDevOverrides: Record<string, number>;
 }
 
 /** Original mock data — used on first load and after reset. */
@@ -19,6 +25,7 @@ export function getDefaultState(): AppState {
     selectedChildId: mockParent.children[0]?.id ?? null,
     bookings: mockBookings,
     cardUsage: mockCards,
+    cardDevOverrides: {},
   };
 }
 

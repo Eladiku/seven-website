@@ -1,10 +1,14 @@
+import Link from "next/link";
 import type { TrainingSession } from "@/data/schedule";
+
+export type CardStatus = "ok" | "none" | "no_remaining";
 
 interface SessionCardProps {
   session: TrainingSession;
   isAttending: boolean;
   currentSpots: number;
   onToggle: () => void;
+  cardStatus: CardStatus;
   /** True when the child is booked for this session but their birth year no longer matches */
   isMismatch?: boolean;
 }
@@ -21,12 +25,17 @@ export default function SessionCard({
   isAttending,
   currentSpots,
   onToggle,
+  cardStatus,
   isMismatch = false,
 }: SessionCardProps) {
   const badge = AGE_BADGE[session.ageGroup] ?? { bg: "rgba(255,255,255,0.1)", color: "#fff" };
   const isFull = currentSpots >= session.spotsTotal && !isAttending;
   const spotsRemaining = session.spotsTotal - currentSpots;
   const fillPct = Math.min((currentSpots / session.spotsTotal) * 100, 100);
+
+  // Booking is blocked when the child has no valid card or no sessions left,
+  // UNLESS the child is already attending (canceling is always allowed).
+  const isBlocked = !isAttending && (cardStatus === "none" || cardStatus === "no_remaining");
 
   return (
     <div
@@ -44,7 +53,7 @@ export default function SessionCard({
           : "1px solid rgba(255,255,255,0.08)",
       }}
     >
-      {/* Top row: badge + year on right, time on left (RTL: right-start) */}
+      {/* Top row: badge + year on right, attending indicator on left (RTL) */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span
@@ -58,7 +67,6 @@ export default function SessionCard({
           </span>
         </div>
 
-        {/* Attending indicator */}
         {isAttending && (
           <span
             className="text-xs font-bold px-2.5 py-1 rounded-full"
@@ -73,7 +81,7 @@ export default function SessionCard({
         )}
       </div>
 
-      {/* Time — large and prominent */}
+      {/* Time */}
       <div
         className="font-black text-3xl leading-none mb-2"
         style={{ color: "#c9a84c", fontVariantNumeric: "tabular-nums" }}
@@ -81,7 +89,7 @@ export default function SessionCard({
         {session.time}
       </div>
 
-      {/* Session title */}
+      {/* Title */}
       <div className="text-white font-bold text-base mb-1">{session.title}</div>
 
       {/* Location + coach */}
@@ -109,9 +117,10 @@ export default function SessionCard({
             className="h-full rounded-full transition-all duration-500"
             style={{
               width: `${fillPct}%`,
-              background: isFull && !isAttending
-                ? "rgba(255,255,255,0.2)"
-                : "linear-gradient(90deg, #c9a84c, #e8c97a)",
+              background:
+                isFull && !isAttending
+                  ? "rgba(255,255,255,0.2)"
+                  : "linear-gradient(90deg, #c9a84c, #e8c97a)",
             }}
           />
         </div>
@@ -156,6 +165,44 @@ export default function SessionCard({
         >
           ביטול הגעה
         </button>
+      ) : isBlocked ? (
+        <div>
+          <button
+            disabled
+            className="w-full py-3 rounded-xl font-bold text-sm cursor-not-allowed mb-2"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.2)",
+              border: "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            {cardStatus === "none" ? "נדרשת כרטיסייה" : "אזלה יתרת האימונים"}
+          </button>
+          <div
+            className="rounded-xl px-4 py-3"
+            style={{
+              background: "rgba(201,168,76,0.05)",
+              border: "1px solid rgba(201,168,76,0.15)",
+            }}
+          >
+            <p className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+              {cardStatus === "none"
+                ? "כדי להירשם לאימון יש לרכוש כרטיסייה"
+                : "כדי להמשיך להירשם יש לרכוש כרטיסייה חדשה"}
+            </p>
+            <Link
+              href="/pricing"
+              className="inline-block text-xs font-bold px-4 py-1.5 rounded-lg transition-all hover:opacity-80"
+              style={{
+                background: "rgba(201,168,76,0.15)",
+                color: "#c9a84c",
+                border: "1px solid rgba(201,168,76,0.3)",
+              }}
+            >
+              לרכישת כרטיסייה
+            </Link>
+          </div>
+        </div>
       ) : (
         <button
           onClick={onToggle}

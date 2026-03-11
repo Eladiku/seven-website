@@ -6,6 +6,8 @@ interface MyCardSectionProps {
   upcomingBookings: Booking[];
   pastBookings: Booking[];
   onCancel: (id: string) => void;
+  /** Dev override: when set, replaces the booking-derived usedSessions count. */
+  devUsedOverride?: number | null;
 }
 
 export default function MyCardSection({
@@ -14,11 +16,14 @@ export default function MyCardSection({
   upcomingBookings,
   pastBookings,
   onCancel,
+  devUsedOverride = null,
 }: MyCardSectionProps) {
-  // ── Derive usedSessions from live bookings ─────────────────────────────────
-  // Every active booking (upcoming confirmed + past completed) counts as one
-  // used session. Canceling a booking automatically returns it to the balance.
-  const usedSessions = upcomingBookings.length + pastBookings.length;
+  // ── Derive usedSessions from live bookings (or dev override) ───────────────
+  // Dev override takes precedence; otherwise every active booking = 1 used.
+  const usedSessions =
+    devUsedOverride !== null
+      ? devUsedOverride
+      : upcomingBookings.length + pastBookings.length;
   const remaining = card ? Math.max(0, card.totalSessions - usedSessions) : 0;
   const isLow = card !== null && remaining <= 2;
 

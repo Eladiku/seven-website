@@ -8,6 +8,7 @@ import { filterSessionsByBirthYear, getUniqueBirthYears } from "@/lib/childUtils
 import DateSelector from "./DateSelector";
 import DaySection from "./DaySection";
 import ChildSelector from "./ChildSelector";
+import type { CardStatus } from "./SessionCard";
 
 const UPCOMING_DAYS = 10;
 
@@ -22,10 +23,40 @@ export default function ScheduleFeed() {
     setSelectedChildId,
     selectedChild,
     bookings,
+    cardUsage,
+    cardDevOverrides,
     toggleAttendance,
   } = useParent();
 
   const hasChildren = children.length > 0;
+
+  // ── Card eligibility ──────────────────────────────────────────────────────
+  // usedSessions is derived from ALL bookings for the child (same logic as
+  // MyCardSection) so the two views are always in sync.
+  const selectedCard = useMemo(
+    () => (selectedChild ? (cardUsage.find((c) => c.childId === selectedChild.id) ?? null) : null),
+    [cardUsage, selectedChild]
+  );
+
+  const allChildBookings = useMemo(
+    () => (selectedChild ? bookings.filter((b) => b.childId === selectedChild.id) : []),
+    [bookings, selectedChild]
+  );
+
+  const cardStatus: CardStatus = useMemo(() => {
+    if (!selectedChild) return "ok"; // no child selected → no restriction (guest view)
+    if (!selectedCard) return "none";
+    // Expiry check: expiresAt is "D.M.YYYY"
+    const [d, m, y] = selectedCard.expiresAt.split(".").map(Number);
+    if (new Date(y, m - 1, d) < new Date()) return "none";
+    // Dev override takes precedence over booking-derived count
+    const used =
+      selectedChild.id in cardDevOverrides
+        ? cardDevOverrides[selectedChild.id]
+        : allChildBookings.length;
+    const remaining = Math.max(0, selectedCard.totalSessions - used);
+    return remaining > 0 ? "ok" : "no_remaining";
+  }, [selectedChild, selectedCard, allChildBookings, cardDevOverrides]);
 
   // Fallback birth year selector (only shown when no children exist)
   const [manualBirthYear, setManualBirthYear] = useState<string>(birthYears[0] ?? "");
@@ -96,6 +127,8 @@ export default function ScheduleFeed() {
   function handleToggle(sessionId: string) {
     if (!selectedChild) return;
     const isNowAttending = !attendingSessionIds.has(sessionId);
+    // Block new bookings when the card is invalid; canceling is always allowed.
+    if (isNowAttending && cardStatus !== "ok") return;
     const session = schedule.find((s) => s.id === sessionId);
     if (!session) return;
 
@@ -163,6 +196,7 @@ export default function ScheduleFeed() {
         attending={attendingSessionIds}
         mismatchedIds={mismatchedIds}
         localSpots={localSpots}
+        cardStatus={cardStatus}
         onToggle={handleToggle}
       />
 
