@@ -137,8 +137,8 @@ export default function ChildrenTable({
         const remaining = card ? Math.max(0, card.totalSessions - usedSessions) : null;
         const cardActive = card !== null && (remaining ?? 0) > 0;
         const upcomingCount = bookings.filter(
-          (b) => b.childId === child.id && b.status === "confirmed" && b.date >= TODAY
-        ).length;
+  (b) => b.childId === child.id && b.status === "confirmed"
+  ).length;
         return { child, card, usedSessions, remaining, cardActive, upcomingCount };
       }),
     [children, bookings, cardUsage, cardDevOverrides]
