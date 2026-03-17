@@ -41,7 +41,7 @@ const values = [
 
 export default function ValuesSection() {
   return (
-    <section className="py-20 bg-light">
+    <section className="py-20" style={{ background: "#070d17" }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="הערכים שלנו"
@@ -50,17 +50,21 @@ export default function ValuesSection() {
           centered
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {values.map((value) => (
             <div
               key={value.title}
-              className="bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:border-green/30 hover:shadow-md transition-all group"
+              className="rounded-2xl p-6 transition-all group"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}
             >
-              <div className="text-3xl mb-4">{value.icon}</div>
-              <h3 className="text-lg font-bold text-navy mb-2 group-hover:text-green transition-colors">
+              <div className="text-2xl mb-4">{value.icon}</div>
+              <h3 className="text-base font-bold text-white mb-2 group-hover:text-indigo transition-colors">
                 {value.title}
               </h3>
-              <p className="text-muted text-sm leading-relaxed">
+              <p className="text-gray-500 text-sm leading-relaxed">
                 {value.description}
               </p>
             </div>
