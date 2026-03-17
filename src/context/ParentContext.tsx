@@ -10,6 +10,8 @@ import {
 } from "react";
 import type { Child, Booking, TrainingCard } from "@/data/parent";
 import type { TrainingSession } from "@/data/schedule";
+import type { SiteContent, ProgramsContent, ProgramCardContent } from "@/data/siteContent";
+import type { Coach, Field } from "@/lib/storage";
 import {
   loadStateFromStorage,
   saveStateToStorage,
@@ -32,9 +34,7 @@ interface ParentContextValue {
   bookings: Booking[];
   toggleAttendance: (
     childId: string,
-    session: TrainingSession,
-    date: string,
-    dayLabel: string
+    session: TrainingSession
   ) => void;
   cancelBooking: (id: string) => void;
 
@@ -45,16 +45,46 @@ interface ParentContextValue {
   updateSession: (id: string, data: Omit<TrainingSession, "id" | "spotsFilled">) => void;
   deleteSession: (id: string) => void;
 
+  coaches: Coach[];
+  addCoach: (name: string) => void;
+  updateCoach: (id: string, name: string) => void;
+  deleteCoach: (id: string) => void;
+
+  fields: Field[];
+  addField: (name: string) => void;
+  updateField: (id: string, name: string) => void;
+  deleteField: (id: string) => void;
+
+  /** Assign a fresh 10-session card to a child (no-op if card already exists). */
+  assignCard: (childId: string) => void;
+  /** Remove a child's training card and clear any dev override. */
+  removeCard: (childId: string) => void;
+
   /**
    * Dev-only overrides: when set for a child, replaces the booking-derived
    * usedSessions count for display and eligibility everywhere.
-   * Set to null to remove the override and return to derived count.
    */
   cardDevOverrides: Record<string, number>;
   devSetCardUsed: (childId: string, used: number | null) => void;
 
   /** Clears localStorage and restores original mock data. */
   resetToMockData: () => void;
+
+  // ── Site content ────────────────────────────────────────────────────────────
+  siteContent: SiteContent;
+  updateProgramsHero: (hero: ProgramsContent["hero"]) => void;
+  updateProgramCard: (id: string, updates: Partial<ProgramCardContent>) => void;
+  resetSiteContent: () => void;
+
+  // ── Auth ─────────────────────────────────────────────────────────────────────
+  currentUser: { role: "admin" | "parent"; name: string } | null;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  /** True while localStorage is being read on mount — prevents auth flicker. */
+  isHydrating: boolean;
+  loginAsParent: () => void;
+  loginAsAdmin: () => void;
+  logout: () => void;
 }
 
 const ParentContext = createContext<ParentContextValue | null>(null);
@@ -70,9 +100,14 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>(defaults.bookings);
   const [cardUsage, setCardUsage] = useState<TrainingCard[]>(defaults.cardUsage);
   const [sessions, setSessions] = useState<TrainingSession[]>(defaults.sessions);
+  const [coaches, setCoaches] = useState<Coach[]>(defaults.coaches);
+  const [fields, setFields] = useState<Field[]>(defaults.fields);
   const [cardDevOverrides, setCardDevOverrides] = useState<Record<string, number>>(
     defaults.cardDevOverrides
   );
+  const [siteContent, setSiteContent] = useState<SiteContent>(defaults.siteContent);
+  const [currentUser, setCurrentUser] = useState<{ role: "admin" | "parent"; name: string } | null>(null);
+  const [isHydrating, setIsHydrating] = useState(true);
 
   // Guards the persist effect from firing before hydration is complete.
   const hydrated = useRef(false);
@@ -83,15 +118,52 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     if (stored) {
       setChildren(stored.children);
       setSelectedChildId(stored.selectedChildId);
-      setBookings(stored.bookings);
+      // Deduplicate bookings: keep only the first booking per childId+sessionId pair.
+      // Duplicates can exist in old localStorage data due to the stale-closure bug.
+      const dedupedBookings = stored.bookings.reduce<Booking[]>((acc, b) => {
+        if (!acc.some((x) => x.childId === b.childId && x.sessionId === b.sessionId)) {
+          acc.push(b);
+        }
+        return acc;
+      }, []);
+      setBookings(dedupedBookings);
       if (Array.isArray(stored.cardUsage)) setCardUsage(stored.cardUsage);
-      // Fall back to default schedule if sessions missing (old localStorage data)
-      if (Array.isArray(stored.sessions)) setSessions(stored.sessions);
+      // Migration guard: stored sessions from before the refactor used `day`
+      // (Hebrew weekday name) instead of `date` (ISO string). If any session
+      // is missing a valid date, discard the entire stored list and use the
+      // current defaults so the UI always shows real dated sessions.
+      if (
+        Array.isArray(stored.sessions) &&
+        stored.sessions.length > 0 &&
+        stored.sessions.every((s) => typeof (s as TrainingSession).date === "string" && (s as TrainingSession).date.length > 0)
+      ) {
+        setSessions(stored.sessions);
+      } else {
+        setSessions(defaults.sessions);
+      }
+      // Fall back to defaults if coaches/fields missing (old localStorage data)
+      if (Array.isArray(stored.coaches) && stored.coaches.length > 0) {
+        setCoaches(stored.coaches);
+      } else {
+        setCoaches(defaults.coaches);
+      }
+      if (Array.isArray(stored.fields) && stored.fields.length > 0) {
+        setFields(stored.fields);
+      } else {
+        setFields(defaults.fields);
+      }
       if (stored.cardDevOverrides && typeof stored.cardDevOverrides === "object") {
         setCardDevOverrides(stored.cardDevOverrides);
       }
+      if (stored.siteContent) {
+        setSiteContent(stored.siteContent);
+      }
+      if (stored.auth?.currentUser) {
+        setCurrentUser(stored.auth.currentUser);
+      }
     }
     hydrated.current = true;
+    setIsHydrating(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Phase 2 — Persist entire state on every change ────────────────────────
@@ -106,9 +178,13 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
       bookings,
       cardUsage,
       sessions,
+      coaches,
+      fields,
       cardDevOverrides,
+      siteContent,
+      auth: { currentUser },
     });
-  }, [children, rawSelectedChildId, bookings, cardUsage, sessions, cardDevOverrides]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [children, rawSelectedChildId, bookings, cardUsage, sessions, coaches, fields, cardDevOverrides, siteContent, currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Children mutations ────────────────────────────────────────────────────
   function addChild(data: Omit<Child, "id">) {
@@ -131,39 +207,38 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
       );
       return next;
     });
+    // Cascade: remove all data associated with this child
+    setBookings((prev) => prev.filter((b) => b.childId !== id));
+    setCardUsage((prev) => prev.filter((c) => c.childId !== id));
+    setCardDevOverrides((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }
 
   // ── Booking mutations ─────────────────────────────────────────────────────
   function toggleAttendance(
     childId: string,
-    session: TrainingSession,
-    date: string,
-    dayLabel: string
+    session: TrainingSession
   ) {
-    const existing = bookings.find(
-      (b) =>
-        b.childId === childId &&
-        b.sessionId === session.id &&
-        b.date === date
-    );
-
-    if (existing) {
-      setBookings((prev) => prev.filter((b) => b.id !== existing.id));
-    } else {
+    // Use a functional updater so the check always reads the latest state,
+    // preventing duplicates from double-clicks or stale closure reads.
+    setBookings((prev) => {
+      const existing = prev.find(
+        (b) => b.childId === childId && b.sessionId === session.id
+      );
+      if (existing) {
+        return prev.filter((b) => b.id !== existing.id);
+      }
       const newBooking: Booking = {
         id: `b-${Date.now()}`,
         childId,
         sessionId: session.id,
-        date,
-        dayLabel,
-        time: session.time,
-        title: session.title,
-        location: session.location,
-        coach: session.coach,
         status: "confirmed",
       };
-      setBookings((prev) => [...prev, newBooking]);
-    }
+      return [...prev, newBooking];
+    });
   }
 
   function cancelBooking(id: string) {
@@ -188,8 +263,58 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
 
   function deleteSession(id: string) {
     setSessions((prev) => prev.filter((s) => s.id !== id));
-    // Remove orphaned bookings for this session
     setBookings((prev) => prev.filter((b) => b.sessionId !== id));
+  }
+
+  // ── Coach mutations (admin) ───────────────────────────────────────────────
+  function addCoach(name: string) {
+    const newCoach: Coach = { id: `coach-${Date.now()}`, name };
+    setCoaches((prev) => [...prev, newCoach]);
+  }
+
+  function updateCoach(id: string, name: string) {
+    setCoaches((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)));
+  }
+
+  function deleteCoach(id: string) {
+    setCoaches((prev) => prev.filter((c) => c.id !== id));
+  }
+
+  // ── Field mutations (admin) ───────────────────────────────────────────────
+  function addField(name: string) {
+    const newField: Field = { id: `field-${Date.now()}`, name };
+    setFields((prev) => [...prev, newField]);
+  }
+
+  function updateField(id: string, name: string) {
+    setFields((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
+  }
+
+  function deleteField(id: string) {
+    setFields((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  // ── Card assign / remove ─────────────────────────────────────────────────
+  function assignCard(childId: string) {
+    if (cardUsage.some((c) => c.childId === childId)) return;
+    const newCard: TrainingCard = {
+      id: `card-${Date.now()}`,
+      childId,
+      type: "10 אימונים",
+      totalSessions: 10,
+      usedSessions: 0,
+      expiresAt: "24.6.2026",
+    };
+    setCardUsage((prev) => [...prev, newCard]);
+  }
+
+  function removeCard(childId: string) {
+    setCardUsage((prev) => prev.filter((c) => c.childId !== childId));
+    setCardDevOverrides((prev) => {
+      const next = { ...prev };
+      delete next[childId];
+      return next;
+    });
   }
 
   // ── Dev override ──────────────────────────────────────────────────────────
@@ -204,6 +329,43 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     });
   }
 
+  // ── Auth mutations ────────────────────────────────────────────────────────
+  function loginAsParent() {
+    setCurrentUser({ role: "parent", name: "הורה" });
+  }
+
+  function loginAsAdmin() {
+    setCurrentUser({ role: "admin", name: "מנהל" });
+  }
+
+  function logout() {
+    setCurrentUser(null);
+  }
+
+  // ── Site content mutations ────────────────────────────────────────────────
+  function updateProgramsHero(hero: ProgramsContent["hero"]) {
+    setSiteContent((prev) => ({
+      ...prev,
+      programs: { ...prev.programs, hero },
+    }));
+  }
+
+  function updateProgramCard(id: string, updates: Partial<ProgramCardContent>) {
+    setSiteContent((prev) => ({
+      ...prev,
+      programs: {
+        ...prev.programs,
+        cards: prev.programs.cards.map((c) =>
+          c.id === id ? { ...c, ...updates } : c
+        ),
+      },
+    }));
+  }
+
+  function resetSiteContent() {
+    setSiteContent(getDefaultState().siteContent);
+  }
+
   // ── Reset ─────────────────────────────────────────────────────────────────
   function resetToMockData() {
     clearStoredState();
@@ -213,7 +375,11 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     setBookings(d.bookings);
     setCardUsage(d.cardUsage);
     setSessions(d.sessions);
+    setCoaches(d.coaches);
+    setFields(d.fields);
     setCardDevOverrides(d.cardDevOverrides);
+    setSiteContent(d.siteContent);
+    setCurrentUser(null);
   }
 
   return (
@@ -234,9 +400,30 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
         addSession,
         updateSession,
         deleteSession,
+        coaches,
+        addCoach,
+        updateCoach,
+        deleteCoach,
+        fields,
+        addField,
+        updateField,
+        deleteField,
+        assignCard,
+        removeCard,
         cardDevOverrides,
         devSetCardUsed,
         resetToMockData,
+        siteContent,
+        updateProgramsHero,
+        updateProgramCard,
+        resetSiteContent,
+        currentUser,
+        isAuthenticated: currentUser !== null,
+        isAdmin: currentUser?.role === "admin",
+        isHydrating,
+        loginAsParent,
+        loginAsAdmin,
+        logout,
       }}
     >
       {node}

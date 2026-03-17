@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { Program } from "@/data/programs";
+import type { ProgramCardContent } from "@/data/siteContent";
 
 interface ProgramCardProps {
-  program: Program;
+  program: ProgramCardContent;
 }
 
 const ageColors: Record<string, string> = {
@@ -59,10 +59,10 @@ export default function ProgramCard({ program }: ProgramCardProps) {
             {program.sessionDuration} לאימון
           </span>
           <Link
-            href="/contact"
+            href="/#contact"
             className="px-5 py-2.5 bg-navy text-white text-sm font-bold rounded-xl hover:bg-green hover:text-navy transition-colors"
           >
-            להרשמה
+            {program.ctaText}
           </Link>
         </div>
       </div>

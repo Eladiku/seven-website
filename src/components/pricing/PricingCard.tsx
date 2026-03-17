@@ -57,7 +57,7 @@ export default function PricingCard({ plan, highlighted = false }: PricingCardPr
         </ul>
 
         <Link
-          href="/contact"
+          href="/#contact"
           className={`block w-full text-center py-3 rounded-xl font-bold text-sm transition-colors ${
             highlighted
               ? "bg-green text-navy hover:bg-green-600"

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useParent } from "@/context/ParentContext";
-import { getUpcomingDays, getSessionsForDate, formatHebDate, toLocalISODate } from "@/lib/scheduleUtils";
+import { getUpcomingDays, getSessionsForDate } from "@/lib/scheduleUtils";
 import { filterSessionsByBirthYear, getUniqueBirthYears } from "@/lib/childUtils";
 import DateSelector from "./DateSelector";
 import DaySection from "./DaySection";
@@ -64,27 +64,28 @@ export default function ScheduleFeed() {
 
   // ── Date selection ────────────────────────────────────────────────────────
   const [selectedDate, setSelectedDate] = useState<Date>(days[0]);
-  const selectedDateISO = toLocalISODate(selectedDate);
-
   // ── Optimistic spot counts ────────────────────────────────────────────────
   const [localSpots, setLocalSpots] = useState<Record<string, number>>(
     () => Object.fromEntries(sessions.map((s) => [s.id, s.spotsFilled]))
   );
 
-  // ── Attending: confirmed bookings for this child on this date ─────────────
+  // ── Attending: confirmed bookings for this child for sessions on this date ─
   const attendingSessionIds = useMemo(() => {
     if (!selectedChild) return new Set<string>();
+    const sessionIdsForDate = new Set(
+      getSessionsForDate(sessions, selectedDate).map((s) => s.id)
+    );
     return new Set(
       bookings
         .filter(
           (b) =>
             b.childId === selectedChild.id &&
-            b.date === selectedDateISO &&
+            sessionIdsForDate.has(b.sessionId) &&
             b.status === "confirmed"
         )
         .map((b) => b.sessionId)
     );
-  }, [bookings, selectedChild, selectedDateISO]);
+  }, [bookings, selectedChild, selectedDate, sessions]);
 
   // ── Sessions to display ───────────────────────────────────────────────────
   // Rule: show sessions that match child's birthYear OR are booked for this child.
@@ -132,12 +133,7 @@ export default function ScheduleFeed() {
     const session = sessions.find((s) => s.id === sessionId);
     if (!session) return;
 
-    toggleAttendance(
-      selectedChild.id,
-      session,
-      selectedDateISO,
-      formatHebDate(selectedDate)
-    );
+    toggleAttendance(selectedChild.id, session);
 
     setLocalSpots((prev) => ({
       ...prev,

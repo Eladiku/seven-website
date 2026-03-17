@@ -51,13 +51,13 @@ export default function Hero() {
 
           <div className="flex flex-col sm:flex-row gap-4">
             <Link
-              href="/programs"
+              href="/#programs"
               className="inline-flex items-center justify-center px-8 py-4 bg-green text-navy font-bold text-lg rounded-xl hover:bg-green-600 transition-colors shadow-lg"
             >
               גלה את התוכניות
             </Link>
             <Link
-              href="/contact"
+              href="/#contact"
               className="inline-flex items-center justify-center px-8 py-4 border-2 border-white/30 text-white font-semibold text-lg rounded-xl hover:border-green hover:text-green transition-colors"
             >
               צור קשר

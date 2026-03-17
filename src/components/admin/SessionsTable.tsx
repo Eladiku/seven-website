@@ -2,15 +2,22 @@
 
 import { useState } from "react";
 import type { TrainingSession } from "@/data/schedule";
-import type { Booking } from "@/data/parent";
+import type { Booking, Child } from "@/data/parent";
+import { formatISODate } from "@/lib/scheduleUtils";
+import type { Coach, Field } from "@/lib/storage";
 import SessionModal from "./SessionModal";
+import SessionDetailsModal from "./SessionDetailsModal";
 
 interface SessionsTableProps {
   sessions: TrainingSession[];
   bookings: Booking[];
+  children: Child[];
+  coaches: Coach[];
+  fields: Field[];
   onAdd: (data: Omit<TrainingSession, "id" | "spotsFilled">) => void;
   onEdit: (id: string, data: Omit<TrainingSession, "id" | "spotsFilled">) => void;
   onDelete: (id: string) => void;
+  onCancelBooking: (id: string) => void;
 }
 
 const AGE_COLORS: Record<string, { bg: string; color: string }> = {
@@ -23,11 +30,16 @@ const AGE_COLORS: Record<string, { bg: string; color: string }> = {
 export default function SessionsTable({
   sessions,
   bookings,
+  children,
+  coaches,
+  fields,
   onAdd,
   onEdit,
   onDelete,
+  onCancelBooking,
 }: SessionsTableProps) {
   const [modalSession, setModalSession] = useState<TrainingSession | null | "new">(null);
+  const [detailsSession, setDetailsSession] = useState<TrainingSession | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Count unique registered participants per session
@@ -63,7 +75,7 @@ export default function SessionsTable({
           <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-                {["אימון", "יום", "שעה", "מיקום", "מאמן", "שנתון", "מכסה", "נרשמו", "פעולות"].map((h) => (
+                {["אימון", "תאריך", "שעה", "מיקום", "מאמן", "שנתון", "מכסה", "נרשמו", "פעולות"].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-right text-xs font-bold whitespace-nowrap"
@@ -106,7 +118,7 @@ export default function SessionsTable({
                           {session.title}
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: "#c9a84c" }}>{session.day}</td>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ color: "#c9a84c" }}>{formatISODate(session.date)}</td>
                       <td className="px-4 py-3 whitespace-nowrap font-mono text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>{session.time}</td>
                       <td className="px-4 py-3 whitespace-nowrap" style={{ color: "rgba(255,255,255,0.55)" }}>📍 {session.location}</td>
                       <td className="px-4 py-3 whitespace-nowrap" style={{ color: "rgba(255,255,255,0.55)" }}>{session.coach}</td>
@@ -125,6 +137,17 @@ export default function SessionsTable({
                       {/* Actions */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setDetailsSession(session)}
+                            className="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                            style={{
+                              background: "rgba(201,168,76,0.08)",
+                              color: "#c9a84c",
+                              border: "1px solid rgba(201,168,76,0.2)",
+                            }}
+                          >
+                            פרטים
+                          </button>
                           <button
                             onClick={() => setModalSession(session)}
                             className="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
@@ -177,10 +200,12 @@ export default function SessionsTable({
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Create / edit modal */}
       {modalSession !== null && (
         <SessionModal
           session={modalSession === "new" ? null : modalSession}
+          coaches={coaches}
+          fields={fields}
           onSave={(data) => {
             if (modalSession === "new") {
               onAdd(data);
@@ -190,6 +215,17 @@ export default function SessionsTable({
             setModalSession(null);
           }}
           onClose={() => setModalSession(null)}
+        />
+      )}
+
+      {/* Details modal */}
+      {detailsSession !== null && (
+        <SessionDetailsModal
+          session={detailsSession}
+          bookings={bookings}
+          children={children}
+          onClose={() => setDetailsSession(null)}
+          onCancelBooking={onCancelBooking}
         />
       )}
     </section>

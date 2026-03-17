@@ -154,7 +154,7 @@ export default function PurchaseModal() {
               className="overflow-y-auto flex-1 p-5 pb-7 space-y-5"
             >
               {/* Session card visual */}
-              <SessionCardVisual usedCount={0} />
+              <SessionCardVisual />
 
               {/* Product description + stats */}
               <div>

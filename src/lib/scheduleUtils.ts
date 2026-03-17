@@ -1,4 +1,4 @@
-import { DAY_INDEX, type TrainingSession } from "@/data/schedule";
+import type { TrainingSession } from "@/data/schedule";
 
 const HEB_DAYS = [
   "ראשון",
@@ -38,11 +38,11 @@ export function getUpcomingDays(count: number): Date[] {
   return days;
 }
 
-/** Returns sessions that recur on the same weekday as the given date. */
+/** Returns sessions whose date matches the given calendar day. */
 export function getSessionsForDate(sessions: TrainingSession[], date: Date): TrainingSession[] {
   if (!Array.isArray(sessions) || !(date instanceof Date) || isNaN(date.getTime())) return [];
-  const dow = date.getDay(); // 0 = Sunday
-  return sessions.filter((s) => DAY_INDEX[s.day] === dow);
+  const iso = toLocalISODate(date);
+  return sessions.filter((s) => s.date === iso);
 }
 
 /** True if two Date objects refer to the same calendar day. */
@@ -59,6 +59,17 @@ export function formatHebDate(date: Date): string {
   const dayName = HEB_DAYS[date.getDay()];
   const monthName = HEB_MONTHS[date.getMonth()];
   return `${dayName}, ${date.getDate()} ${monthName}`;
+}
+
+/**
+ * Formats an ISO date string ("YYYY-MM-DD") as "22 מרץ 2026".
+ * Returns "—" if the input is missing or invalid.
+ */
+export function formatISODate(isoDate: string | undefined | null): string {
+  if (!isoDate) return "—";
+  const d = new Date(isoDate + "T00:00:00");
+  if (isNaN(d.getTime())) return "—";
+  return `${d.getDate()} ${HEB_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 /** Short day name for the date pill (first 2-3 chars). */

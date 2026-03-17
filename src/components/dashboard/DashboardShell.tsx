@@ -3,10 +3,9 @@
 import { useMemo, useState } from "react";
 import { mockParent } from "@/data/parent";
 import { useParent } from "@/context/ParentContext";
+import { toLocalISODate } from "@/lib/scheduleUtils";
 import ChildrenSection from "./ChildrenSection";
 import MyCardSection from "./MyCardSection";
-
-const TODAY = "2026-03-10";
 
 export default function DashboardShell() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -22,6 +21,9 @@ export default function DashboardShell() {
     bookings,
     cancelBooking,
     cardUsage,
+    sessions,
+    assignCard,
+    removeCard,
     cardDevOverrides,
     devSetCardUsed,
     resetToMockData,
@@ -36,6 +38,13 @@ export default function DashboardShell() {
       ? cardDevOverrides[selectedChild.id]
       : null;
 
+  const sessionMap = useMemo(
+    () => Object.fromEntries(sessions.map((s) => [s.id, s])),
+    [sessions]
+  );
+
+  const today = toLocalISODate(new Date());
+
   const childBookings = useMemo(
     () => bookings.filter((b) => b.childId === selectedChild?.id),
     [bookings, selectedChild]
@@ -44,17 +53,25 @@ export default function DashboardShell() {
   const upcomingBookings = useMemo(
     () =>
       childBookings
-        .filter((b) => b.status === "confirmed" && b.date >= TODAY)
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [childBookings]
+        .filter((b) => {
+          const s = sessionMap[b.sessionId];
+          return s && b.status === "confirmed" && s.date >= today;
+        })
+        .sort((a, b) => (sessionMap[a.sessionId]?.date ?? "").localeCompare(sessionMap[b.sessionId]?.date ?? "")),
+    [childBookings, sessionMap, today]
   );
 
   const pastBookings = useMemo(
     () =>
       childBookings
-        .filter((b) => b.status === "completed" || b.date < TODAY)
-        .sort((a, b) => b.date.localeCompare(a.date)),
-    [childBookings]
+        .filter((b) => {
+          const s = sessionMap[b.sessionId];
+          // Skip orphaned bookings (session no longer exists in sessionMap)
+          if (!s) return false;
+          return b.status === "completed" || s.date < today;
+        })
+        .sort((a, b) => (sessionMap[b.sessionId]?.date ?? "").localeCompare(sessionMap[a.sessionId]?.date ?? "")),
+    [childBookings, sessionMap, today]
   );
 
   // ── Dev controls ──────────────────────────────────────────────────────────
@@ -150,12 +167,13 @@ export default function DashboardShell() {
           card={selectedCard}
           upcomingBookings={upcomingBookings}
           pastBookings={pastBookings}
+          sessionMap={sessionMap}
           onCancel={cancelBooking}
           devUsedOverride={devUsedOverride}
         />
 
         {/* ── Dev tools ─────────────────────────────────────────────────────── */}
-        {selectedChild && selectedCard && (
+        {selectedChild && (
           <div
             className="rounded-2xl p-4"
             style={{
@@ -188,37 +206,68 @@ export default function DashboardShell() {
               </span>
             </div>
 
-            {/* Buttons */}
-            <div className="flex flex-wrap gap-2">
-              {devButtons.map(({ label, used }) => {
-                const isActive = devUsedOverride === used;
-                return (
-                  <button
-                    key={label}
-                    onClick={() =>
-                      devSetCardUsed(selectedChild.id, isActive ? null : used)
-                    }
-                    className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
-                    style={
-                      isActive
-                        ? {
-                            background: "rgba(251,146,60,0.15)",
-                            color: "#fdba74",
-                            border: "1px solid rgba(251,146,60,0.35)",
-                          }
-                        : {
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.4)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                          }
-                    }
-                  >
-                    {label}
-                    {isActive && " ✓"}
-                  </button>
-                );
-              })}
+            {/* Card assign / remove */}
+            <div className="mb-3 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              {!selectedCard ? (
+                <button
+                  onClick={() => assignCard(selectedChild.id)}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{
+                    background: "rgba(201,168,76,0.1)",
+                    color: "#c9a84c",
+                    border: "1px solid rgba(201,168,76,0.25)",
+                  }}
+                >
+                  + הוסף כרטיסייה
+                </button>
+              ) : (
+                <button
+                  onClick={() => removeCard(selectedChild.id)}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{
+                    background: "rgba(239,68,68,0.08)",
+                    color: "rgba(252,165,165,0.7)",
+                    border: "1px solid rgba(239,68,68,0.2)",
+                  }}
+                >
+                  הסר כרטיסייה
+                </button>
+              )}
             </div>
+
+            {/* Balance override buttons — only when card exists */}
+            {selectedCard && (
+              <div className="flex flex-wrap gap-2">
+                {devButtons.map(({ label, used }) => {
+                  const isActive = devUsedOverride === used;
+                  return (
+                    <button
+                      key={label}
+                      onClick={() =>
+                        devSetCardUsed(selectedChild.id, isActive ? null : used)
+                      }
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
+                      style={
+                        isActive
+                          ? {
+                              background: "rgba(251,146,60,0.15)",
+                              color: "#fdba74",
+                              border: "1px solid rgba(251,146,60,0.35)",
+                            }
+                          : {
+                              background: "rgba(255,255,255,0.04)",
+                              color: "rgba(255,255,255,0.4)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                            }
+                      }
+                    >
+                      {label}
+                      {isActive && " ✓"}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

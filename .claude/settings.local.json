@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run:*)",
       "Bash(npx tsc --noEmit 2>&1 | head -40)",
-      "Bash(cd \"C:/Users/97252/claude-projects/seven-website\" && npx tsc --noEmit 2>&1)"
+      "Bash(cd \"C:/Users/97252/claude-projects/seven-website\" && npx tsc --noEmit 2>&1)",
+      "Bash(grep -r \"siteContent\\\\|contentEdit\\\\|ContentEdit\" /c/Users/97252/claude-projects/seven-website/src --include=*.ts --include=*.tsx)"
     ]
   }
 }

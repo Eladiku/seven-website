@@ -2,9 +2,21 @@ import { mockParent, mockBookings, mockCards } from "@/data/parent";
 import type { Child, Booking, TrainingCard } from "@/data/parent";
 import { schedule } from "@/data/schedule";
 import type { TrainingSession } from "@/data/schedule";
+import { defaultSiteContent } from "@/data/siteContent";
+import type { SiteContent } from "@/data/siteContent";
 
 /** The single localStorage key for the entire app state. */
 export const STORAGE_KEY = "sevenAcademyState";
+
+export interface Coach {
+  id: string;
+  name: string;
+}
+
+export interface Field {
+  id: string;
+  name: string;
+}
 
 /** Shape of everything persisted in localStorage. */
 export interface AppState {
@@ -13,23 +25,44 @@ export interface AppState {
   bookings: Booking[];
   cardUsage: TrainingCard[];
   sessions: TrainingSession[];
+  coaches: Coach[];
+  fields: Field[];
   /**
    * Dev-only overrides for usedSessions per child.
    * When set, replaces the booking-derived count for display + eligibility.
-   * Easy to remove: delete this field and its usages in context + components.
    */
   cardDevOverrides: Record<string, number>;
+  siteContent: SiteContent;
+  auth: {
+    currentUser: { role: "admin" | "parent"; name: string } | null;
+  };
 }
 
 /** Original mock data — used on first load and after reset. */
 export function getDefaultState(): AppState {
+  const uniqueCoachNames = [...new Set(schedule.map((s) => s.coach))];
+  const coaches: Coach[] = uniqueCoachNames.map((name, i) => ({
+    id: `coach-${i + 1}`,
+    name,
+  }));
+
+  const uniqueFieldNames = [...new Set(schedule.map((s) => s.location))];
+  const fields: Field[] = uniqueFieldNames.map((name, i) => ({
+    id: `field-${i + 1}`,
+    name,
+  }));
+
   return {
     children: mockParent.children,
     selectedChildId: mockParent.children[0]?.id ?? null,
     bookings: mockBookings,
     cardUsage: mockCards,
     sessions: schedule,
+    coaches,
+    fields,
     cardDevOverrides: {},
+    siteContent: defaultSiteContent,
+    auth: { currentUser: null },
   };
 }
 
@@ -43,7 +76,7 @@ export function loadStateFromStorage(): AppState | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<AppState>;
-    // Minimal shape validation — if core arrays are missing, treat as corrupt
+    // Minimal shape validation
     if (!Array.isArray(parsed.children) || !Array.isArray(parsed.bookings)) {
       return null;
     }

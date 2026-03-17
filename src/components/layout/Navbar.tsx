@@ -1,22 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { useParent } from "@/context/ParentContext";
 
-const navLinks = [
+const baseLinks = [
   { href: "/", label: "בית" },
-  { href: "/programs", label: "תוכניות" },
-  { href: "/pricing", label: "כרטיסיית אימונים" },
   { href: "/schedule", label: "לוח אימונים" },
+  { href: "/pricing", label: "כרטיסיית אימונים" },
   { href: "/dashboard", label: "אזור אישי" },
-  { href: "/contact", label: "צור קשר" },
-  { href: "/admin", label: "ניהול" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isAdmin, isAuthenticated, logout } = useParent();
+
+  const navLinks = isAdmin
+    ? [...baseLinks, { href: "/admin", label: "ניהול" }]
+    : baseLinks;
 
   return (
     <header className="bg-navy sticky top-0 z-50 shadow-lg">
@@ -45,12 +49,21 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="/contact"
-              className="mr-3 px-5 py-2 bg-green text-navy text-sm font-bold rounded-lg hover:bg-green-600 transition-colors"
-            >
-              הצטרף עכשיו
-            </Link>
+            {isAuthenticated ? (
+              <button
+                onClick={() => { logout(); router.push("/"); }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-gray-400 hover:text-white hover:bg-navy-700"
+              >
+                יציאה
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-gray-300 hover:text-white hover:bg-navy-700"
+              >
+                כניסה
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -90,14 +103,23 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <div className="pt-2 px-4">
-              <Link
-                href="/contact"
-                onClick={() => setMobileOpen(false)}
-                className="block w-full text-center px-5 py-2.5 bg-green text-navy text-sm font-bold rounded-lg hover:bg-green-600 transition-colors"
-              >
-                הצטרף עכשיו
-              </Link>
+            <div className="pt-2 px-4 space-y-2">
+              {isAuthenticated ? (
+                <button
+                  onClick={() => { logout(); router.push("/"); setMobileOpen(false); }}
+                  className="block w-full text-center px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-navy-700 transition-colors"
+                >
+                  יציאה
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="block w-full text-center px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-300 hover:text-white hover:bg-navy-700 transition-colors"
+                >
+                  כניסה
+                </Link>
+              )}
             </div>
           </div>
         )}

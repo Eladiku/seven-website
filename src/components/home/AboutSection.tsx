@@ -78,7 +78,7 @@ export default function AboutSection() {
 
             <div className="mt-8">
               <Link
-                href="/programs"
+                href="/#programs"
                 className="inline-flex items-center gap-2 text-green font-semibold hover:gap-3 transition-all"
               >
                 ראה את כל התוכניות

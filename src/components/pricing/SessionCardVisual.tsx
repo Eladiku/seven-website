@@ -1,8 +1,4 @@
-interface SessionCardVisualProps {
-  usedCount?: number;
-}
-
-export default function SessionCardVisual({ usedCount = 0 }: SessionCardVisualProps) {
+export default function SessionCardVisual() {
   return (
     <div
       className="relative rounded-2xl overflow-hidden w-full"
@@ -60,9 +56,7 @@ export default function SessionCardVisual({ usedCount = 0 }: SessionCardVisualPr
               7
             </span>
             <div>
-              <div
-                className="text-white font-black tracking-widest text-sm leading-tight"
-              >
+              <div className="text-white font-black tracking-widest text-sm leading-tight">
                 SEVEN
               </div>
               <div
@@ -86,44 +80,51 @@ export default function SessionCardVisual({ usedCount = 0 }: SessionCardVisualPr
           </div>
         </div>
 
-        {/* Middle: sport title */}
+        {/* Middle: card name */}
         <div>
           <div className="text-white font-black text-2xl sm:text-3xl mb-1 leading-tight">
             כדורגל קבוצתי
           </div>
           <div className="text-gray-500 text-xs tracking-widest">
-            תכנון · השקעה · תיאום
+            כרטיסיית כדורגל קבוצתי · Seven Academy
           </div>
         </div>
 
-        {/* Bottom: session dots grid */}
-        <div className="grid grid-cols-5 gap-2">
-          {Array.from({ length: 10 }, (_, i) => {
-            const used = i < usedCount;
-            return used ? (
-              <div
-                key={i}
-                className="aspect-square rounded-full flex items-center justify-center"
-                style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-gray-700" />
+        {/* Bottom: product summary */}
+        <div className="flex items-end justify-between">
+          <div className="flex gap-5">
+            <div>
+              <div className="text-xs tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                אימונים
               </div>
-            ) : (
-              <div
-                key={i}
-                className="aspect-square rounded-full"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(201,168,76,0.28), rgba(232,201,122,0.1))",
-                  border: "1.5px solid rgba(201,168,76,0.7)",
-                  boxShadow: "0 0 8px rgba(201,168,76,0.25)",
-                }}
-              />
-            );
-          })}
+              <div className="text-white font-black text-xl leading-none">10</div>
+            </div>
+            <div>
+              <div className="text-xs tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                תוקף
+              </div>
+              <div className="text-white font-black text-xl leading-none">3 חודשים</div>
+            </div>
+            <div>
+              <div className="text-xs tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                לאימון
+              </div>
+              <div className="font-black text-xl leading-none" style={{ color: "#c9a84c" }}>
+                ₪160
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="text-xs font-bold px-2.5 py-1 rounded-full"
+            style={{
+              background: "rgba(34,197,94,0.12)",
+              color: "#86efac",
+              border: "1px solid rgba(34,197,94,0.25)",
+            }}
+          >
+            פעיל ✓
+          </div>
         </div>
       </div>
     </div>

@@ -1,21 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { weekDays } from "@/data/schedule";
 import type { TrainingSession } from "@/data/schedule";
+import type { Coach, Field } from "@/lib/storage";
 
 type SessionFormData = Omit<TrainingSession, "id" | "spotsFilled">;
 
 interface SessionModalProps {
   /** null = create mode, non-null = edit mode */
   session: TrainingSession | null;
+  coaches: Coach[];
+  fields: Field[];
   onSave: (data: SessionFormData) => void;
   onClose: () => void;
 }
 
 const EMPTY: SessionFormData = {
   title: "",
-  day: "ראשון",
+  date: "",
   time: "",
   location: "",
   coach: "",
@@ -27,7 +29,7 @@ const EMPTY: SessionFormData = {
 const AGE_GROUPS = ["U9", "U12", "U15", "U17"];
 const BIRTH_YEARS = Array.from({ length: 14 }, (_, i) => String(2026 - 8 - i));
 
-export default function SessionModal({ session, onSave, onClose }: SessionModalProps) {
+export default function SessionModal({ session, coaches, fields, onSave, onClose }: SessionModalProps) {
   const [form, setForm] = useState<SessionFormData>(EMPTY);
 
   useEffect(() => {
@@ -35,9 +37,13 @@ export default function SessionModal({ session, onSave, onClose }: SessionModalP
       const { id: _id, spotsFilled: _sf, ...rest } = session;
       setForm(rest);
     } else {
-      setForm(EMPTY);
+      setForm({
+        ...EMPTY,
+        coach: coaches[0]?.name ?? "",
+        location: fields[0]?.name ?? "",
+      });
     }
-  }, [session]);
+  }, [session, coaches, fields]);
 
   function set<K extends keyof SessionFormData>(key: K, value: SessionFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -45,7 +51,7 @@ export default function SessionModal({ session, onSave, onClose }: SessionModalP
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.title.trim() || !form.time.trim() || !form.location.trim() || !form.coach.trim() || !form.birthYear) return;
+    if (!form.title.trim() || !form.date || !form.time.trim() || !form.location.trim() || !form.coach.trim() || !form.birthYear) return;
     onSave(form);
   }
 
@@ -79,14 +85,17 @@ export default function SessionModal({ session, onSave, onClose }: SessionModalP
             />
           </Field>
 
-          {/* Day + Time */}
+          {/* Date + Time */}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="יום">
-              <select value={form.day} onChange={(e) => set("day", e.target.value)} className={inputCls}>
-                {weekDays.map((d) => (
-                  <option key={d} value={d} style={{ background: "#0d1b2a" }}>{d}</option>
-                ))}
-              </select>
+            <Field label="תאריך">
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => set("date", e.target.value)}
+                required
+                className={inputCls}
+                style={{ colorScheme: "dark" }}
+              />
             </Field>
             <Field label="שעה">
               <input
@@ -102,25 +111,37 @@ export default function SessionModal({ session, onSave, onClose }: SessionModalP
 
           {/* Location + Coach */}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="מיקום">
-              <input
-                type="text"
-                value={form.location}
-                onChange={(e) => set("location", e.target.value)}
-                placeholder="מגרש A"
-                required
-                className={inputCls}
-              />
+            <Field label="מגרש">
+              {fields.length > 0 ? (
+                <select value={form.location} onChange={(e) => set("location", e.target.value)} className={inputCls}>
+                  {fields.map((f) => (
+                    <option key={f.id} value={f.name} style={{ background: "#0d1b2a" }}>{f.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <div
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }}
+                >
+                  הוסף מגרש תחילה
+                </div>
+              )}
             </Field>
             <Field label="מאמן">
-              <input
-                type="text"
-                value={form.coach}
-                onChange={(e) => set("coach", e.target.value)}
-                placeholder="שם המאמן"
-                required
-                className={inputCls}
-              />
+              {coaches.length > 0 ? (
+                <select value={form.coach} onChange={(e) => set("coach", e.target.value)} className={inputCls}>
+                  {coaches.map((c) => (
+                    <option key={c.id} value={c.name} style={{ background: "#0d1b2a" }}>{c.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <div
+                  className="w-full rounded-xl px-4 py-2.5 text-xs"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }}
+                >
+                  הוסף מאמן תחילה
+                </div>
+              )}
             </Field>
           </div>
 
@@ -160,7 +181,8 @@ export default function SessionModal({ session, onSave, onClose }: SessionModalP
           <div className="flex gap-3 pt-2">
             <button
               type="submit"
-              className="flex-1 py-3 rounded-xl font-black text-sm transition-all hover:opacity-90"
+              disabled={coaches.length === 0 || fields.length === 0}
+              className="flex-1 py-3 rounded-xl font-black text-sm transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #c9a84c, #e8c97a)", color: "#07100e" }}
             >
               {isEdit ? "שמירה" : "צור אימון"}

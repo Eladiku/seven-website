@@ -1,10 +1,13 @@
 import type { Child, TrainingCard, Booking } from "@/data/parent";
+import type { TrainingSession } from "@/data/schedule";
+import { formatISODate } from "@/lib/scheduleUtils";
 
 interface MyCardSectionProps {
   child: Child | null;
   card: TrainingCard | null;
   upcomingBookings: Booking[];
   pastBookings: Booking[];
+  sessionMap: Record<string, TrainingSession>;
   onCancel: (id: string) => void;
   /** Dev override: when set, replaces the booking-derived usedSessions count. */
   devUsedOverride?: number | null;
@@ -15,6 +18,7 @@ export default function MyCardSection({
   card,
   upcomingBookings,
   pastBookings,
+  sessionMap,
   onCancel,
   devUsedOverride = null,
 }: MyCardSectionProps) {
@@ -224,7 +228,9 @@ export default function MyCardSection({
           </div>
         ) : (
           <div className="space-y-3">
-            {upcomingBookings.map((booking) => (
+            {upcomingBookings.map((booking) => {
+              const s = sessionMap[booking.sessionId];
+              return (
               <div
                 key={booking.id}
                 className="rounded-2xl p-5"
@@ -236,17 +242,17 @@ export default function MyCardSection({
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold mb-1" style={{ color: "#c9a84c" }}>
-                      {booking.dayLabel}
+                      {formatISODate(s?.date)}
                     </div>
                     <div
                       className="font-black text-2xl leading-none mb-2"
                       style={{ color: "rgba(255,255,255,0.9)", fontVariantNumeric: "tabular-nums" }}
                     >
-                      {booking.time}
+                      {s?.time ?? "—"}
                     </div>
-                    <div className="text-white font-bold text-sm mb-0.5">{booking.title}</div>
+                    <div className="text-white font-bold text-sm mb-0.5">{s?.title ?? "—"}</div>
                     <div className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                      📍 {booking.location}&nbsp;&nbsp;·&nbsp;&nbsp;{booking.coach}
+                      📍 {s?.location ?? "—"}&nbsp;&nbsp;·&nbsp;&nbsp;{s?.coach ?? "—"}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
@@ -274,7 +280,8 @@ export default function MyCardSection({
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
@@ -302,7 +309,9 @@ export default function MyCardSection({
           </div>
         ) : (
           <div className="space-y-2">
-            {pastBookings.map((booking) => (
+            {pastBookings.map((booking) => {
+              const s = sessionMap[booking.sessionId];
+              return (
               <div
                 key={booking.id}
                 className="rounded-xl px-5 py-3.5 flex items-center justify-between gap-3"
@@ -319,19 +328,20 @@ export default function MyCardSection({
                     ✓
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-bold text-white truncate">{booking.title}</div>
+                    <div className="text-sm font-bold text-white truncate">{s?.title ?? "—"}</div>
                     <div className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-                      {booking.dayLabel}&nbsp;&nbsp;·&nbsp;&nbsp;{booking.time}
+                      {formatISODate(s?.date)}&nbsp;&nbsp;·&nbsp;&nbsp;{s?.time ?? "—"}
                     </div>
                   </div>
                 </div>
                 <div className="flex-shrink-0 text-end">
                   <div className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.25)" }}>
-                    📍 {booking.location}
+                    📍 {s?.location ?? "—"}
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

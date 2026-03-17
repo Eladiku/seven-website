@@ -2,22 +2,28 @@
 
 import { useState } from "react";
 import type { Booking, Child } from "@/data/parent";
+import type { TrainingSession } from "@/data/schedule";
+import { formatISODate } from "@/lib/scheduleUtils";
 
 interface BookingsTableProps {
   bookings: Booking[];
   children: Child[];
+  sessions: TrainingSession[];
   onCancel: (bookingId: string) => void;
 }
 
-export default function BookingsTable({ bookings, children, onCancel }: BookingsTableProps) {
+export default function BookingsTable({ bookings, children, sessions, onCancel }: BookingsTableProps) {
   const [cancelConfirmId, setCancelConfirmId] = useState<string | null>(null);
 
   const childMap = Object.fromEntries(children.map((c) => [c.id, c]));
+  const sessionMap = Object.fromEntries(sessions.map((s) => [s.id, s]));
 
-  // Sort: upcoming (confirmed, future) first, then by date desc
+  // Sort: confirmed first, then by session date desc
   const sorted = [...bookings].sort((a, b) => {
     if (a.status !== b.status) return a.status === "confirmed" ? -1 : 1;
-    return b.date.localeCompare(a.date);
+    const dateA = sessionMap[a.sessionId]?.date ?? "";
+    const dateB = sessionMap[b.sessionId]?.date ?? "";
+    return dateB.localeCompare(dateA);
   });
 
   return (
@@ -59,6 +65,7 @@ export default function BookingsTable({ bookings, children, onCancel }: Bookings
               ) : (
                 sorted.map((booking, idx) => {
                   const child = childMap[booking.childId];
+                  const session = sessionMap[booking.sessionId];
                   const isConfirmed = booking.status === "confirmed";
                   return (
                     <tr
@@ -79,15 +86,15 @@ export default function BookingsTable({ bookings, children, onCancel }: Bookings
                       </td>
                       {/* Session title */}
                       <td className="px-4 py-3 whitespace-nowrap" style={{ color: "rgba(255,255,255,0.7)" }}>
-                        {booking.title}
+                        {session?.title ?? "—"}
                       </td>
                       {/* Date */}
                       <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: "#c9a84c" }}>
-                        {booking.dayLabel}
+                        {formatISODate(session?.date)}
                       </td>
                       {/* Time */}
                       <td className="px-4 py-3 whitespace-nowrap font-mono text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
-                        {booking.time}
+                        {session?.time ?? "—"}
                       </td>
                       {/* Status */}
                       <td className="px-4 py-3 whitespace-nowrap">

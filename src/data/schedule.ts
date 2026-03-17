@@ -1,7 +1,7 @@
 export interface TrainingSession {
   id: string;
-  /** Hebrew day name: ראשון–שישי */
-  day: string;
+  /** ISO date "2026-03-17" */
+  date: string;
   time: string;
   ageGroup: string;
   title: string;
@@ -13,13 +13,69 @@ export interface TrainingSession {
   spotsFilled: number;
 }
 
-export const weekDays = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי"];
+export const ageGroupColors: Record<string, string> = {
+  U9: "bg-blue-100 text-blue-800",
+  U12: "bg-purple-100 text-purple-800",
+  U15: "bg-orange-100 text-orange-800",
+  U17: "bg-green-100 text-green-800",
+};
 
 export const schedule: TrainingSession[] = [
-  // Sunday
+  // ── Past sessions (before 2026-03-15) ─────────────────────────────────────
+  {
+    id: "p1",
+    date: "2026-03-08",
+    time: "17:15–18:30",
+    ageGroup: "U12",
+    title: "כדורגל קבוצתי",
+    location: "מגרש A",
+    coach: "יוסי כהן",
+    birthYear: "2014",
+    spotsTotal: 14,
+    spotsFilled: 11,
+  },
+  {
+    id: "p2",
+    date: "2026-03-10",
+    time: "17:30–19:00",
+    ageGroup: "U15",
+    title: "כדורגל קבוצתי",
+    location: "מגרש B",
+    coach: "רון אברהם",
+    birthYear: "2011",
+    spotsTotal: 16,
+    spotsFilled: 13,
+  },
+  {
+    id: "p3",
+    date: "2026-03-10",
+    time: "16:00–17:15",
+    ageGroup: "U12",
+    title: "כדורגל קבוצתי",
+    location: "מגרש A",
+    coach: "יוסי כהן",
+    birthYear: "2014",
+    spotsTotal: 14,
+    spotsFilled: 8,
+  },
+  {
+    id: "p4",
+    date: "2026-03-12",
+    time: "17:00–18:40",
+    ageGroup: "U15",
+    title: "כדורגל קבוצתי",
+    location: "מגרש A",
+    coach: "רון אברהם",
+    birthYear: "2011",
+    spotsTotal: 16,
+    spotsFilled: 10,
+  },
+
+  // ── Upcoming sessions (from 2026-03-15) ────────────────────────────────────
+  // Sunday 2026-03-15
   {
     id: "s1",
-    day: "ראשון",
+    date: "2026-03-15",
     time: "16:00–17:00",
     ageGroup: "U9",
     title: "כדורגל קבוצתי",
@@ -31,7 +87,7 @@ export const schedule: TrainingSession[] = [
   },
   {
     id: "s2",
-    day: "ראשון",
+    date: "2026-03-15",
     time: "17:15–18:30",
     ageGroup: "U12",
     title: "כדורגל קבוצתי",
@@ -39,11 +95,11 @@ export const schedule: TrainingSession[] = [
     coach: "יוסי כהן",
     birthYear: "2014",
     spotsTotal: 14,
-    spotsFilled: 11,
+    spotsFilled: 8,
   },
   {
     id: "s3",
-    day: "ראשון",
+    date: "2026-03-15",
     time: "18:45–20:15",
     ageGroup: "U15",
     title: "כדורגל קבוצתי",
@@ -51,12 +107,12 @@ export const schedule: TrainingSession[] = [
     coach: "רון אברהם",
     birthYear: "2011",
     spotsTotal: 16,
-    spotsFilled: 16,
+    spotsFilled: 7,
   },
-  // Monday
+  // Monday 2026-03-16
   {
     id: "s4",
-    day: "שני",
+    date: "2026-03-16",
     time: "16:00–17:00",
     ageGroup: "U9",
     title: "כדורגל קבוצתי",
@@ -68,7 +124,7 @@ export const schedule: TrainingSession[] = [
   },
   {
     id: "s5",
-    day: "שני",
+    date: "2026-03-16",
     time: "17:15–19:05",
     ageGroup: "U17",
     title: "כדורגל קבוצתי",
@@ -78,10 +134,10 @@ export const schedule: TrainingSession[] = [
     spotsTotal: 16,
     spotsFilled: 14,
   },
-  // Tuesday
+  // Tuesday 2026-03-17
   {
     id: "s6",
-    day: "שלישי",
+    date: "2026-03-17",
     time: "16:00–17:15",
     ageGroup: "U12",
     title: "כדורגל קבוצתי",
@@ -93,7 +149,7 @@ export const schedule: TrainingSession[] = [
   },
   {
     id: "s7",
-    day: "שלישי",
+    date: "2026-03-17",
     time: "17:30–19:00",
     ageGroup: "U15",
     title: "כדורגל קבוצתי",
@@ -101,12 +157,12 @@ export const schedule: TrainingSession[] = [
     coach: "רון אברהם",
     birthYear: "2011",
     spotsTotal: 16,
-    spotsFilled: 13,
+    spotsFilled: 6,
   },
-  // Wednesday
+  // Wednesday 2026-03-18
   {
     id: "s8",
-    day: "רביעי",
+    date: "2026-03-18",
     time: "16:00–17:00",
     ageGroup: "U9",
     title: "כדורגל קבוצתי",
@@ -118,7 +174,7 @@ export const schedule: TrainingSession[] = [
   },
   {
     id: "s9",
-    day: "רביעי",
+    date: "2026-03-18",
     time: "17:15–18:30",
     ageGroup: "U12",
     title: "כדורגל קבוצתי",
@@ -126,12 +182,12 @@ export const schedule: TrainingSession[] = [
     coach: "יוסי כהן",
     birthYear: "2014",
     spotsTotal: 14,
-    spotsFilled: 8,
+    spotsFilled: 4,
   },
-  // Thursday
+  // Thursday 2026-03-19
   {
     id: "s10",
-    day: "חמישי",
+    date: "2026-03-19",
     time: "17:00–18:40",
     ageGroup: "U15",
     title: "כדורגל קבוצתי",
@@ -139,11 +195,11 @@ export const schedule: TrainingSession[] = [
     coach: "רון אברהם",
     birthYear: "2011",
     spotsTotal: 16,
-    spotsFilled: 10,
+    spotsFilled: 9,
   },
   {
     id: "s11",
-    day: "חמישי",
+    date: "2026-03-19",
     time: "17:00–18:45",
     ageGroup: "U17",
     title: "כדורגל קבוצתי",
@@ -153,35 +209,17 @@ export const schedule: TrainingSession[] = [
     spotsTotal: 16,
     spotsFilled: 16,
   },
-  // Friday
+  // Sunday 2026-03-22
   {
     id: "s12",
-    day: "שישי",
-    time: "09:00–10:40",
-    ageGroup: "U17",
+    date: "2026-03-22",
+    time: "17:15–18:30",
+    ageGroup: "U12",
     title: "כדורגל קבוצתי",
-    location: "מגרש B",
-    coach: "דני פרץ",
-    birthYear: "2009",
-    spotsTotal: 16,
-    spotsFilled: 6,
+    location: "מגרש A",
+    coach: "יוסי כהן",
+    birthYear: "2014",
+    spotsTotal: 14,
+    spotsFilled: 3,
   },
 ];
-
-/** Maps Hebrew day name → JS getDay() index (0 = Sunday) */
-export const DAY_INDEX: Record<string, number> = {
-  ראשון: 0,
-  שני: 1,
-  שלישי: 2,
-  רביעי: 3,
-  חמישי: 4,
-  שישי: 5,
-  שבת: 6,
-};
-
-export const ageGroupColors: Record<string, string> = {
-  U9: "bg-blue-100 text-blue-800",
-  U12: "bg-purple-100 text-purple-800",
-  U15: "bg-orange-100 text-orange-800",
-  U17: "bg-green-100 text-green-800",
-};
