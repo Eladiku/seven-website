@@ -163,9 +163,7 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
       if (stored.siteContent) {
         setSiteContent(stored.siteContent);
       }
-      if (stored.auth?.currentUser) {
-        setCurrentUser(stored.auth.currentUser);
-      }
+      // currentUser is set by the Supabase auth flow, not from localStorage.
     }
     hydrated.current = true;
     setIsHydrating(false);
@@ -614,11 +612,11 @@ useEffect(() => {
 
   // ── Auth mutations ────────────────────────────────────────────────────────
   function loginAsParent() {
-    setCurrentUser({ role: "parent", name: "הורה" });
+    // Auth is handled by Supabase — this legacy function is a no-op.
   }
 
   function loginAsAdmin() {
-    setCurrentUser({ role: "admin", name: "מנהל" });
+    // Auth is handled by Supabase — this legacy function is a no-op.
   }
 
   async function logout() {
