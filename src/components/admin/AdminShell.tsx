@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { mockParent } from "@/data/parent";
 import { useParent } from "@/context/ParentContext";
-import SessionsTable from "./SessionsTable";
+import SupabaseSessionsTable from "./SupabaseSessionsTable";
 import BookingsTable from "./BookingsTable";
 import ChildrenTable from "./ChildrenTable";
 import CoachesTable from "./CoachesTable";
@@ -27,9 +27,6 @@ export default function AdminShell() {
 
   const {
     sessions,
-    addSession,
-    updateSession,
-    deleteSession,
     bookings,
     cancelBooking,
     children,
@@ -168,17 +165,7 @@ export default function AdminShell() {
       {/* Tab content */}
       <div className="px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto pb-16">
         {activeTab === "sessions" && (
-          <SessionsTable
-            sessions={sessions}
-            bookings={bookings}
-            children={children}
-            coaches={coaches}
-            fields={fields}
-            onAdd={addSession}
-            onEdit={updateSession}
-            onDelete={deleteSession}
-            onCancelBooking={cancelBooking}
-          />
+          <SupabaseSessionsTable />
         )}
 
         {activeTab === "bookings" && (

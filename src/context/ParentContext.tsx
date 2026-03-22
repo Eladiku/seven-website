@@ -1,5 +1,5 @@
 "use client";
-
+import { supabase } from "@/lib/supabase";
 import {
   createContext,
   useContext,
@@ -106,7 +106,12 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     defaults.cardDevOverrides
   );
   const [siteContent, setSiteContent] = useState<SiteContent>(defaults.siteContent);
-  const [currentUser, setCurrentUser] = useState<{ role: "admin" | "parent"; name: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+  role: "admin" | "parent";
+  name: string;
+  email: string;
+  parentId: string;
+} | null>(null);
   const [isHydrating, setIsHydrating] = useState(true);
 
   // Guards the persist effect from firing before hydration is complete.
@@ -165,6 +170,207 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     hydrated.current = true;
     setIsHydrating(false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    async function loadSessionsFromDB() {
+      const { data, error } = await supabase
+        .from("sessions")
+        .select("*")
+        .order("date", { ascending: true });
+      
+      if (error) {
+        console.error("Error loading sessions:", error);
+        return;
+      }
+
+      if (data) {
+        // התאמה למבנה של TrainingSession
+        const mapped = data.map((s) => ({
+          id: s.id,
+          date: s.date,
+          time: s.time,
+          ageGroup: s.age_group,
+          title: s.title,
+          location: s.location,
+          coach: s.coach,
+          birthYear: s.birth_year,
+          spotsTotal: s.spots_total,
+          spotsFilled: s.spots_filled,
+        }));
+
+        setSessions(mapped);
+      }
+    }
+
+    loadSessionsFromDB();
+  }, []);
+
+  useEffect(() => {
+  async function loadBookingsFromDB() {
+    const childIds = children.map((c) => c.id);
+
+    if (childIds.length === 0) {
+      setBookings([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("*")
+      .in("child_id", childIds);
+
+    if (error) {
+      console.error("Error loading bookings:", error);
+      return;
+    }
+
+    if (data) {
+      const mapped = data.map((b) => ({
+        id: b.id,
+        childId: b.child_id,
+        sessionId: b.session_id,
+        status: b.status,
+      }));
+
+      setBookings(mapped);
+    }
+  }
+
+  loadBookingsFromDB();
+}, [children]);
+
+  useEffect(() => {
+  async function loadCardsFromDB() {
+    const childIds = children.map((c) => c.id);
+
+    if (childIds.length === 0) {
+      setCardUsage([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("cards")
+      .select("*")
+      .in("child_id", childIds);
+
+    if (error) {
+      console.error("Error loading cards:", error);
+      return;
+    }
+
+    if (data) {
+      const mapped = data.map((c) => ({
+        id: c.id,
+        childId: c.child_id,
+        type: c.type ?? "10 אימונים",
+        totalSessions: c.total_sessions,
+        usedSessions: c.total_sessions - c.remaining_sessions,
+        expiresAt: c.expires_at ?? "24.6.2026",
+      }));
+
+      setCardUsage(mapped);
+    }
+  }
+
+  loadCardsFromDB();
+  }, [children]);
+
+useEffect(() => {
+  async function syncAuthUser() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    
+
+    if (!user?.email) {
+      
+      setCurrentUser(null);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("parents")
+      .select("*")
+      .eq("email", user.email)
+      .single();
+
+    
+
+    if (error || !data) {
+      console.error("Error loading parent record:", error);
+      setCurrentUser(null);
+      return;
+    }
+
+    
+
+    setCurrentUser({
+  role: data.role === "admin" ? "admin" : "parent",
+  name: data.name ?? user.email,
+  email: data.email,
+  parentId: data.id,
+  });
+  }
+
+  syncAuthUser();
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(() => {
+    
+    syncAuthUser();
+  });
+
+  return () => {
+    subscription.unsubscribe();
+  };
+}, []);   
+
+useEffect(() => {
+  async function loadChildrenFromDB() {
+    if (!currentUser?.parentId) return;
+
+    const query =
+      currentUser.role === "admin"
+        ? supabase.from("children").select("*")
+        : supabase
+            .from("children")
+            .select("*")
+            .eq("parent_id", currentUser.parentId);
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error loading children:", error);
+      return;
+    }
+
+    if (data) {
+      const mapped = data.map((c) => ({
+        id: c.id,
+        name: c.name,
+        birthYear: c.birth_year,
+      }));
+
+      setChildren(mapped);
+
+      if (mapped.length > 0) {
+        setSelectedChildId((prev) =>
+          prev && mapped.some((c) => c.id === prev) ? prev : mapped[0].id
+        );
+      } else {
+        setSelectedChildId(null);
+      }
+    }
+  }
+
+  loadChildrenFromDB();
+}, [currentUser]);
+
+
+  useEffect(() => {
+    console.log("currentUser:", currentUser);
+  }, [currentUser]);
 
   // ── Phase 2 — Persist entire state on every change ────────────────────────
   const resolvedChild =
@@ -187,59 +393,136 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
   }, [children, rawSelectedChildId, bookings, cardUsage, sessions, coaches, fields, cardDevOverrides, siteContent, currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Children mutations ────────────────────────────────────────────────────
-  function addChild(data: Omit<Child, "id">) {
-    const newChild: Child = { id: `child-${Date.now()}`, ...data };
+  async function addChild(data: Omit<Child, "id">) {
+  if (!currentUser?.parentId) return;
+
+  const newChildId = `child-${Date.now()}`;
+
+  const { data: inserted, error } = await supabase
+    .from("children")
+    .insert({
+      id: newChildId,
+      name: data.name,
+      birth_year: data.birthYear,
+      parent_id: currentUser.parentId,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error adding child:", error);
+    return;
+  }
+
+  if (inserted) {
+    const newChild: Child = {
+      id: inserted.id,
+      name: inserted.name,
+      birthYear: inserted.birth_year,
+    };
+
     setChildren((prev) => [...prev, newChild]);
     setSelectedChildId((prev) => prev ?? newChild.id);
   }
-
-  function editChild(id: string, updates: Omit<Child, "id">) {
-    setChildren((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    );
   }
 
-  function deleteChild(id: string) {
-    setChildren((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      setSelectedChildId((sel) =>
-        sel === id ? (next[0]?.id ?? null) : sel
-      );
-      return next;
-    });
-    // Cascade: remove all data associated with this child
-    setBookings((prev) => prev.filter((b) => b.childId !== id));
-    setCardUsage((prev) => prev.filter((c) => c.childId !== id));
-    setCardDevOverrides((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
+  async function editChild(id: string, updates: Omit<Child, "id">) {
+  const { error } = await supabase
+    .from("children")
+    .update({
+      name: updates.name,
+      birth_year: updates.birthYear,
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error editing child:", error);
+    return;
+  }
+
+  setChildren((prev) =>
+    prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+  );
+  }
+
+  async function deleteChild(id: string) {
+  const { error } = await supabase
+    .from("children")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting child:", error);
+    return;
+  }
+
+  setChildren((prev) => {
+    const next = prev.filter((c) => c.id !== id);
+    setSelectedChildId((sel) => (sel === id ? (next[0]?.id ?? null) : sel));
+    return next;
+  });
+
+  setBookings((prev) => prev.filter((b) => b.childId !== id));
+  setCardUsage((prev) => prev.filter((c) => c.childId !== id));
+  setCardDevOverrides((prev) => {
+    const next = { ...prev };
+    delete next[id];
+    return next;
+   });
   }
 
   // ── Booking mutations ─────────────────────────────────────────────────────
-  function toggleAttendance(
-    childId: string,
-    session: TrainingSession
-  ) {
-    // Use a functional updater so the check always reads the latest state,
-    // preventing duplicates from double-clicks or stale closure reads.
-    setBookings((prev) => {
-      const existing = prev.find(
-        (b) => b.childId === childId && b.sessionId === session.id
-      );
-      if (existing) {
-        return prev.filter((b) => b.id !== existing.id);
-      }
-      const newBooking: Booking = {
-        id: `b-${Date.now()}`,
-        childId,
-        sessionId: session.id,
-        status: "confirmed",
-      };
-      return [...prev, newBooking];
-    });
+  async function toggleAttendance(
+  childId: string,
+  session: TrainingSession
+) {
+  const existing = bookings.find(
+    (b) => b.childId === childId && b.sessionId === session.id
+  );
+
+  // אם כבר קיים → מחיקה
+  if (existing) {
+    const { error } = await supabase
+      .from("bookings")
+      .delete()
+      .eq("id", existing.id);
+
+    if (error) {
+      console.error("Error deleting booking:", error);
+      return;
+    }
+
+    setBookings((prev) => prev.filter((b) => b.id !== existing.id));
+    return;
   }
+
+  // אם לא קיים → יצירה
+  const { data, error } = await supabase
+    .from("bookings")
+    .insert({
+      child_id: childId,
+      session_id: session.id,
+      status: "confirmed",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating booking:", error);
+    return;
+  }
+
+  if (data) {
+    const newBooking = {
+      id: data.id,
+      childId: data.child_id,
+      sessionId: data.session_id,
+      status: data.status,
+    };
+
+    setBookings((prev) => [...prev, newBooking]);
+  }
+}
 
   function cancelBooking(id: string) {
     setBookings((prev) => prev.filter((b) => b.id !== id));
@@ -338,8 +621,9 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
     setCurrentUser({ role: "admin", name: "מנהל" });
   }
 
-  function logout() {
-    setCurrentUser(null);
+  async function logout() {
+  await supabase.auth.signOut();
+  setCurrentUser(null);
   }
 
   // ── Site content mutations ────────────────────────────────────────────────
