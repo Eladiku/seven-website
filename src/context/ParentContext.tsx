@@ -166,7 +166,7 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
       // currentUser is set by the Supabase auth flow, not from localStorage.
     }
     hydrated.current = true;
-    setIsHydrating(false);
+    // isHydrating stays true until syncAuthUser resolves — prevents auth flicker.
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     async function loadSessionsFromDB() {
@@ -274,40 +274,39 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
 
 useEffect(() => {
   async function syncAuthUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    
+      if (!user) {
+        setCurrentUser(null);
+        setChildren([]);
+        return;
+      }
 
-    if (!user?.email) {
-      
-      setCurrentUser(null);
-      return;
+      const { data, error } = await supabase
+        .from("parents")
+        .select("*")
+        .eq("auth_user_id", user.id)
+        .single();
+
+      if (error || !data) {
+        console.error("Error loading parent record:", error);
+        setCurrentUser(null);
+        setChildren([]);
+        return;
+      }
+
+      setCurrentUser({
+        role: data.role === "admin" ? "admin" : "parent",
+        name: data.name ?? user.email,
+        email: data.email,
+        parentId: data.id,
+      });
+    } finally {
+      setIsHydrating(false);
     }
-
-    const { data, error } = await supabase
-      .from("parents")
-      .select("*")
-      .eq("email", user.email)
-      .single();
-
-    
-
-    if (error || !data) {
-      console.error("Error loading parent record:", error);
-      setCurrentUser(null);
-      return;
-    }
-
-    
-
-    setCurrentUser({
-  role: data.role === "admin" ? "admin" : "parent",
-  name: data.name ?? user.email,
-  email: data.email,
-  parentId: data.id,
-  });
   }
 
   syncAuthUser();
