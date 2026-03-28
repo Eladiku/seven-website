@@ -190,7 +190,7 @@ export function ParentProvider({ children: node }: { children: ReactNode }) {
           title: s.title,
           location: s.location,
           coach: s.coach,
-          birthYear: s.birth_year,
+          birthYear: String(s.target_birth_year),
           spotsTotal: s.spots_total,
           spotsFilled: s.spots_filled,
         }));
@@ -346,7 +346,7 @@ useEffect(() => {
       const mapped = data.map((c) => ({
         id: c.id,
         name: c.name,
-        birthYear: c.birth_year,
+        birthYear: String(c.birth_year),
       }));
 
       setChildren(mapped);

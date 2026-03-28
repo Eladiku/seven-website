@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { mockParent } from "@/data/parent";
 import { useParent } from "@/context/ParentContext";
 import { toLocalISODate } from "@/lib/scheduleUtils";
 import ChildrenSection from "./ChildrenSection";
@@ -27,6 +26,7 @@ export default function DashboardShell() {
     cardDevOverrides,
     devSetCardUsed,
     resetToMockData,
+    currentUser,
   } = useParent();
 
   // ── Derived data ──────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ export default function DashboardShell() {
           אזור אישי
         </span>
         <h1 className="text-4xl font-black text-white mb-1">
-          שלום, {mockParent.name}
+          שלום, {currentUser?.name ?? ""}
         </h1>
         <p className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
           ניהול ילדים, כרטיסיות ואימונים

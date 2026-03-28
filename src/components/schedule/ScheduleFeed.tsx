@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useParent } from "@/context/ParentContext";
 import { getUpcomingDays, getSessionsForDate } from "@/lib/scheduleUtils";
-import { filterSessionsByBirthYear, getUniqueBirthYears } from "@/lib/childUtils";
+import { filterSessionsByBirthYear } from "@/lib/childUtils";
 import DateSelector from "./DateSelector";
 import DaySection from "./DaySection";
 import ChildSelector from "./ChildSelector";
@@ -13,7 +13,6 @@ const UPCOMING_DAYS = 10;
 
 export default function ScheduleFeed() {
   const days = useMemo(() => getUpcomingDays(UPCOMING_DAYS), []);
-  const birthYears = useMemo(() => getUniqueBirthYears(), []);
 
   // ── All state from the single shared context ──────────────────────────────
   const {
@@ -28,7 +27,14 @@ export default function ScheduleFeed() {
     toggleAttendance,
   } = useParent();
 
-  const hasChildren = children.length > 0;
+  // Birth years derived from live Supabase sessions (not static hardcoded data)
+  const birthYears = useMemo(
+    () =>
+      [...new Set(sessions.map((s) => s.birthYear).filter(Boolean))].sort((a, b) =>
+        b.localeCompare(a)
+      ),
+    [sessions]
+  );
 
   // ── Card eligibility ──────────────────────────────────────────────────────
   // usedSessions is derived from ALL bookings for the child (same logic as
@@ -58,8 +64,9 @@ export default function ScheduleFeed() {
     return remaining > 0 ? "ok" : "no_remaining";
   }, [selectedChild, selectedCard, allChildBookings, cardDevOverrides]);
 
-  // Fallback birth year selector (only shown when no children exist)
-  const [manualBirthYear, setManualBirthYear] = useState<string>(birthYears[0] ?? "");
+  // Fallback birth year selector (only shown when no children exist).
+  // Intentionally starts empty — user must pick a year when no child is assigned.
+  const [manualBirthYear, setManualBirthYear] = useState<string>("");
   const activeBirthYear = selectedChild ? selectedChild.birthYear : manualBirthYear;
 
   // ── Date selection ────────────────────────────────────────────────────────
@@ -153,49 +160,71 @@ export default function ScheduleFeed() {
         onSelectBirthYear={setManualBirthYear}
       />
 
-      {/* Helper text */}
-      <div
-        className="mb-6 text-xs rounded-xl px-4 py-2.5 inline-block"
-        style={{
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          color: "rgba(255,255,255,0.4)",
-        }}
-      >
-        מציגים אימונים עבור:{" "}
-        <span style={{ color: "rgba(255,255,255,0.75)" }}>
-          {selectedChild ? selectedChild.name : `שנתון ${activeBirthYear}`}
-        </span>
-        {" | "}
-        <span style={{ color: "rgba(201,168,76,0.8)" }}>שנתון {activeBirthYear}</span>
-      </div>
-
-      {/* Date selector */}
-      <div className="mb-8">
-        <p
-          className="text-xs font-semibold mb-3 tracking-widest uppercase"
-          style={{ color: "rgba(255,255,255,0.3)" }}
+      {/* Helper text — hidden when no year is selected yet */}
+      {activeBirthYear && (
+        <div
+          className="mb-6 text-xs rounded-xl px-4 py-2.5 inline-block"
+          style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            color: "rgba(255,255,255,0.4)",
+          }}
         >
-          בחר תאריך
-        </p>
-        <DateSelector
-          days={days}
-          selectedDate={selectedDate}
-          sessions={sessions}
-          onSelect={setSelectedDate}
-        />
-      </div>
+          מציגים אימונים עבור:{" "}
+          <span style={{ color: "rgba(255,255,255,0.75)" }}>
+            {selectedChild ? selectedChild.name : `שנתון ${activeBirthYear}`}
+          </span>
+          {" | "}
+          <span style={{ color: "rgba(201,168,76,0.8)" }}>שנתון {activeBirthYear}</span>
+        </div>
+      )}
 
-      {/* Session feed */}
-      <DaySection
-        date={selectedDate}
-        sessions={sessionsToShow}
-        attending={attendingSessionIds}
-        mismatchedIds={mismatchedIds}
-        localSpots={localSpots}
-        cardStatus={cardStatus}
-        onToggle={handleToggle}
-      />
+      {!activeBirthYear ? (
+        /* No child and no year selected — prompt user to pick */
+        <div
+          className="mb-8 rounded-2xl px-5 py-6 text-center"
+          style={{
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          <p className="text-sm font-medium mb-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+            בחר שנתון כדי לראות את האימונים הרלוונטיים
+          </p>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+            השתמש בסינון למעלה כדי לבחור שנתון
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Date selector */}
+          <div className="mb-8">
+            <p
+              className="text-xs font-semibold mb-3 tracking-widest uppercase"
+              style={{ color: "rgba(255,255,255,0.3)" }}
+            >
+              בחר תאריך
+            </p>
+            <DateSelector
+              days={days}
+              selectedDate={selectedDate}
+              sessions={sessions}
+              onSelect={setSelectedDate}
+            />
+          </div>
+
+          {/* Session feed */}
+          <DaySection
+            date={selectedDate}
+            sessions={sessionsToShow}
+            attending={attendingSessionIds}
+            mismatchedIds={mismatchedIds}
+            localSpots={localSpots}
+            cardStatus={cardStatus}
+            onToggle={handleToggle}
+          />
+        </>
+      )}
 
       {/* Summary badge */}
       {totalConfirmed > 0 && (
