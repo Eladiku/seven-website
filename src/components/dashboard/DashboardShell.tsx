@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useParent } from "@/context/ParentContext";
 import { toLocalISODate } from "@/lib/scheduleUtils";
 import ChildrenSection from "./ChildrenSection";
@@ -8,6 +9,7 @@ import MyCardSection from "./MyCardSection";
 
 export default function DashboardShell() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const router = useRouter();
 
   const {
     children,
@@ -27,7 +29,19 @@ export default function DashboardShell() {
     devSetCardUsed,
     resetToMockData,
     currentUser,
+    isAdmin,
+    isHydrating,
   } = useParent();
+
+  // Guard: redirect once hydration is complete.
+  useEffect(() => {
+    if (isHydrating) return;
+    if (isAdmin) { router.replace("/admin"); return; }
+    if (!currentUser) { router.replace("/login"); return; }
+  }, [isHydrating, isAdmin, currentUser, router]);
+
+  // Render nothing until auth is resolved — prevents mock/stale data flash.
+  if (isHydrating || isAdmin || !currentUser) return null;
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const selectedCard =

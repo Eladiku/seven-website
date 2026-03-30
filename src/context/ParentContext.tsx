@@ -285,24 +285,80 @@ useEffect(() => {
         return;
       }
 
-      const { data, error } = await supabase
+      // 1. Try to find parent row already linked to this auth user.
+      const { data: byAuthId } = await supabase
         .from("parents")
         .select("*")
         .eq("auth_user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
-        console.error("Error loading parent record:", error);
-        setCurrentUser(null);
-        setChildren([]);
-        return;
+      let parentData = byAuthId;
+
+      if (!parentData) {
+        // 2. No linked row — check by email.
+        const { data: byEmail } = await supabase
+          .from("parents")
+          .select("*")
+          .eq("email", user.email!)
+          .maybeSingle();
+
+        if (!byEmail) {
+          // 2a. No parents row found by auth_user_id or email.
+          // Only auto-create when the user explicitly came through the signup form,
+          // identified by the is_parent_signup flag set in signup/page.tsx.
+          // The login page sends no metadata, so admins and manually-created auth
+          // users will never have this flag and will be denied instead of receiving
+          // a phantom parent row.
+          const isParentSignup = user.user_metadata?.is_parent_signup === true;
+          const fullName = user.user_metadata?.full_name as string | undefined;
+          if (!isParentSignup) {
+            console.warn("syncAuthUser: authenticated user has no parents row and no signup intent — denying access");
+            setCurrentUser(null);
+            setChildren([]);
+            return;
+          }
+          const { data: created, error: createError } = await supabase
+            .from("parents")
+            .insert({ name: fullName ?? user.email ?? "הורה", email: user.email, role: "parent", auth_user_id: user.id })
+            .select()
+            .single();
+          if (createError) {
+            console.error("Error creating parent record:", createError);
+            setCurrentUser(null);
+            setChildren([]);
+            return;
+          }
+          parentData = created;
+        } else if (!byEmail.auth_user_id) {
+          // 2b. Existing unlinked row — link it.
+          const { data: linked, error: linkError } = await supabase
+            .from("parents")
+            .update({ auth_user_id: user.id })
+            .eq("id", byEmail.id)
+            .select()
+            .single();
+          if (linkError) {
+            console.error("Error linking parent record:", linkError);
+            setCurrentUser(null);
+            setChildren([]);
+            return;
+          }
+          parentData = linked;
+        } else {
+          // 2c. Email already linked to a different auth account — refuse silently.
+          console.error("Auth conflict: email already linked to another account");
+          await supabase.auth.signOut();
+          setCurrentUser(null);
+          setChildren([]);
+          return;
+        }
       }
 
       setCurrentUser({
-        role: data.role === "admin" ? "admin" : "parent",
-        name: data.name ?? user.email,
-        email: data.email,
-        parentId: data.id,
+        role: parentData.role === "admin" ? "admin" : "parent",
+        name: parentData.name ?? user.email,
+        email: parentData.email,
+        parentId: parentData.id,
       });
     } finally {
       setIsHydrating(false);
@@ -619,8 +675,14 @@ useEffect(() => {
   }
 
   async function logout() {
-  await supabase.auth.signOut();
-  setCurrentUser(null);
+    await supabase.auth.signOut();
+    // Clear all user-specific state and localStorage so the next session
+    // starts fresh (prevents stale data leaking between users).
+    clearStoredState();
+    setCurrentUser(null);
+    setChildren([]);
+    setBookings([]);
+    setCardUsage([]);
   }
 
   // ── Site content mutations ────────────────────────────────────────────────

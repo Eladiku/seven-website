@@ -201,11 +201,12 @@ export default function SupabaseSessionsTable() {
               border: "1px solid rgba(255,255,255,0.1)",
               color: filterYear !== "all" ? "#c9a84c" : "rgba(255,255,255,0.6)",
               minWidth: "110px",
+              colorScheme: "dark",
             }}
           >
-            <option value="all">כל השנתונים</option>
+            <option value="all" style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>כל השנתונים</option>
             {BIRTH_YEARS.map((y) => (
-              <option key={y} value={y}>{y}</option>
+              <option key={y} value={y} style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>{y}</option>
             ))}
           </select>
         </div>
@@ -241,12 +242,13 @@ export default function SupabaseSessionsTable() {
               border: "1px solid rgba(255,255,255,0.1)",
               color: filterOccupancy !== "all" ? "#c9a84c" : "rgba(255,255,255,0.6)",
               minWidth: "120px",
+              colorScheme: "dark",
             }}
           >
-            <option value="all">כל התפוסות</option>
-            <option value="available">פנוי</option>
-            <option value="almost">כמעט מלא</option>
-            <option value="full">מלא</option>
+            <option value="all" style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>כל התפוסות</option>
+            <option value="available" style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>פנוי</option>
+            <option value="almost" style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>כמעט מלא</option>
+            <option value="full" style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>מלא</option>
           </select>
         </div>
 
@@ -263,11 +265,12 @@ export default function SupabaseSessionsTable() {
               border: "1px solid rgba(255,255,255,0.1)",
               color: sortOrder !== "default" ? "#c9a84c" : "rgba(255,255,255,0.6)",
               minWidth: "130px",
+              colorScheme: "dark",
             }}
           >
-            <option value="default">תאריך + שעה</option>
-            <option value="most-full">הכי מלא קודם</option>
-            <option value="least-full">הכי פנוי קודם</option>
+            <option value="default" style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>תאריך + שעה</option>
+            <option value="most-full" style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>הכי מלא קודם</option>
+            <option value="least-full" style={{ background: "#0d1b2a", color: "rgba(255,255,255,0.85)" }}>הכי פנוי קודם</option>
           </select>
         </div>
 

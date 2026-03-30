@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -72,6 +73,20 @@ export default function LoginPage() {
             {error}
           </p>
         )}
+
+        <p
+          className="text-xs text-center mt-6"
+          style={{ color: "rgba(255,255,255,0.3)" }}
+        >
+          אין לך חשבון?{" "}
+          <Link
+            href="/signup"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+            className="underline"
+          >
+            להרשמה
+          </Link>
+        </p>
       </div>
     </div>
   );

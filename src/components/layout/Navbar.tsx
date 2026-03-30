@@ -5,11 +5,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useParent } from "@/context/ParentContext";
 
-const baseLinks = [
+const parentLinks = [
   { href: "/", label: "בית" },
   { href: "/schedule", label: "לוח אימונים" },
   { href: "/pricing", label: "כרטיסיית אימונים" },
   { href: "/dashboard", label: "אזור אישי" },
+];
+
+const adminLinks = [
+  { href: "/", label: "בית" },
+  { href: "/schedule", label: "לוח אימונים" },
+  { href: "/admin", label: "ניהול מערכת" },
 ];
 
 export default function Navbar() {
@@ -18,9 +24,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAdmin, isAuthenticated, logout } = useParent();
 
-  const navLinks = isAdmin
-    ? [...baseLinks, { href: "/admin", label: "ניהול" }]
-    : baseLinks;
+  const navLinks = isAdmin ? adminLinks : parentLinks;
 
   return (
     <header
