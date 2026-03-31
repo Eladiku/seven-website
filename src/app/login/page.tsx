@@ -14,6 +14,11 @@ export default function LoginPage() {
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
+      options: {
+        // Use current origin so the magic link works on localhost, Vercel Preview,
+        // and production without any per-environment Supabase config changes.
+        emailRedirectTo: window.location.origin,
+      },
     });
 
     if (error) {

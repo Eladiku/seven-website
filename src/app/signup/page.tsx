@@ -44,6 +44,9 @@ export default function SignupPage() {
         // login/page.tsx sends no metadata, so this flag reliably distinguishes
         // new parent registrations from admin/manual logins.
         data: { full_name: name.trim(), is_parent_signup: true },
+        // Use current origin so the magic link works on localhost, Vercel Preview,
+        // and production without any per-environment Supabase config changes.
+        emailRedirectTo: window.location.origin,
       },
     });
 
