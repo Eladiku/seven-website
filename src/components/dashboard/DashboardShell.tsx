@@ -40,10 +40,7 @@ export default function DashboardShell() {
     if (!currentUser) { router.replace("/login"); return; }
   }, [isHydrating, isAdmin, currentUser, router]);
 
-  // Render nothing until auth is resolved — prevents mock/stale data flash.
-  if (isHydrating || isAdmin || !currentUser) return null;
-
-  // ── Derived data ──────────────────────────────────────────────────────────
+  // ── Derived data — all hooks must run unconditionally ─────────────────────
   const selectedCard =
     cardUsage.find((c) => c.childId === selectedChild?.id) ?? null;
 
@@ -90,6 +87,9 @@ export default function DashboardShell() {
 
   // ── Dev controls ──────────────────────────────────────────────────────────
   const total = selectedCard?.totalSessions ?? 10;
+
+  // Render nothing until auth is resolved — must be after all hooks.
+  if (isHydrating || isAdmin || !currentUser) return null;
   const devButtons: { label: string; used: number }[] = [
     { label: "הגדר יתרה ל-0", used: total },
     { label: "הגדר יתרה ל-1", used: total - 1 },

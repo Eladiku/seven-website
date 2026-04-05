@@ -61,6 +61,19 @@ interface ParentContextValue {
   removeCard: (childId: string) => void;
 
   /**
+   * Temporary purchase flow (no payment integration yet).
+   * Finds or creates the child by name+birthYear, then inserts a 10-session card
+   * in Supabase and updates local state immediately.
+   *
+   * Returns:
+   *  "ok"              – card created successfully
+   *  "duplicate"       – card already exists for this child
+   *  "unauthenticated" – no logged-in parent session
+   *  "error"           – Supabase insert failed
+   */
+  purchaseCard: (childName: string, birthYear: string) => Promise<"ok" | "duplicate" | "unauthenticated" | "error">;
+
+  /**
    * Dev-only overrides: when set for a child, replaces the booking-derived
    * usedSessions count for display and eligibility everywhere.
    */
@@ -653,6 +666,96 @@ useEffect(() => {
     });
   }
 
+  async function purchaseCard(
+    childName: string,
+    birthYear: string
+  ): Promise<"ok" | "duplicate" | "unauthenticated" | "error"> {
+    if (!currentUser?.parentId) return "unauthenticated";
+
+    // Find or create the child for this parent.
+    let childId: string;
+    const existingChild = children.find(
+      (c) =>
+        c.name.trim().toLowerCase() === childName.trim().toLowerCase() &&
+        c.birthYear === birthYear
+    );
+
+    if (existingChild) {
+      childId = existingChild.id;
+    } else {
+      const newChildId = `child-${Date.now()}`;
+      const { data: inserted, error: childError } = await supabase
+        .from("children")
+        .insert({
+          id: newChildId,
+          name: childName.trim(),
+          birth_year: Number(birthYear),
+          parent_id: currentUser.parentId,
+        })
+        .select()
+        .single();
+
+      if (childError || !inserted) {
+        console.error("purchaseCard: error creating child:", {
+          message: childError?.message,
+          details: childError?.details,
+          hint: childError?.hint,
+          code: childError?.code,
+        });
+        return "error";
+      }
+
+      const newChild: Child = {
+        id: inserted.id,
+        name: inserted.name,
+        birthYear: String(inserted.birth_year),
+      };
+      setChildren((prev) => [...prev, newChild]);
+      childId = inserted.id;
+    }
+
+    // Prevent duplicate cards for the same child.
+    if (cardUsage.some((c) => c.childId === childId)) return "duplicate";
+
+    // Expiry: 3 months from today.
+    const expiresAt = new Date();
+    expiresAt.setMonth(expiresAt.getMonth() + 3);
+    const expiresAtISO = expiresAt.toISOString().split("T")[0];
+
+    const { data: card, error: cardError } = await supabase
+      .from("cards")
+      .insert({
+        child_id: childId,
+        type: "10 אימונים",
+        total_sessions: 10,
+        remaining_sessions: 10,
+        expires_at: expiresAtISO,
+      })
+      .select()
+      .single();
+
+    if (cardError || !card) {
+      console.error("purchaseCard: error creating card:", {
+        message: cardError?.message,
+        details: cardError?.details,
+        hint: cardError?.hint,
+        code: cardError?.code,
+      });
+      return "error";
+    }
+
+    const newCard: TrainingCard = {
+      id: card.id,
+      childId: card.child_id,
+      type: card.type ?? "10 אימונים",
+      totalSessions: card.total_sessions,
+      usedSessions: 0,
+      expiresAt: card.expires_at ?? expiresAtISO,
+    };
+    setCardUsage((prev) => [...prev, newCard]);
+    return "ok";
+  }
+
   // ── Dev override ──────────────────────────────────────────────────────────
   function devSetCardUsed(childId: string, used: number | null) {
     setCardDevOverrides((prev) => {
@@ -753,6 +856,7 @@ useEffect(() => {
         deleteField,
         assignCard,
         removeCard,
+        purchaseCard,
         cardDevOverrides,
         devSetCardUsed,
         resetToMockData,

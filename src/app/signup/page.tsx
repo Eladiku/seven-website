@@ -46,7 +46,7 @@ export default function SignupPage() {
         data: { full_name: name.trim(), is_parent_signup: true },
         // Use current origin so the magic link works on localhost, Vercel Preview,
         // and production without any per-environment Supabase config changes.
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: window.location.origin + "/auth/callback",
       },
     });
 
